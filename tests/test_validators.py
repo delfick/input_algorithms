@@ -1,7 +1,7 @@
 # coding: spec
 
+from input_algorithms.errors import BadSpec, BadSpecValue, DeprecatedKey
 from input_algorithms.spec_base import Spec, NotSpecified
-from input_algorithms.errors import BadSpec, BadSpecValue
 from input_algorithms.validators import Validator
 from input_algorithms import validators as va
 
@@ -140,7 +140,7 @@ describe TestCase, "deprecated_key":
     it "complains if the key is in the value":
         key = mock.Mock(name="key")
         reason = mock.Mock(name="reason")
-        with self.fuzzyAssertRaisesError(DeprecationWarning, "The key {0} is deprecated: {1}".format(key, reason)):
+        with self.fuzzyAssertRaisesError(DeprecatedKey, key=key, reason=reason):
             va.deprecated_key(key, reason).normalise(self.meta, {key: 1})
 
     it "doesn't complain if the key is not in the value":

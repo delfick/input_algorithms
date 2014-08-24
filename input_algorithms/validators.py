@@ -1,5 +1,5 @@
+from input_algorithms.errors import BadSpecValue, DeprecatedKey
 from input_algorithms.spec_base import Spec, NotSpecified
-from input_algorithms.errors import BadSpecValue
 
 import re
 
@@ -52,5 +52,5 @@ class deprecated_key(Validator):
     def validate(self, meta, val):
         """Complain if the key is in val"""
         if self.key in val:
-            raise DeprecationWarning("The key {0} is deprecated: {1}".format(self.key, self.reason))
+            raise DeprecatedKey(key=self.key, reason=self.reason, meta=meta)
 

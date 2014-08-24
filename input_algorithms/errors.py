@@ -15,3 +15,6 @@ class BadDirectory(BadSpecValue):
 class BadFilename(BadSpecValue):
     desc = "Expected a path to a filename"
 
+class DeprecatedKey(BadSpecValue):
+    desc = "Key is deprecated"
+
