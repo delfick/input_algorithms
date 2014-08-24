@@ -248,9 +248,10 @@ class string_choice_spec(string_spec):
         return val
 
 class create_spec(Spec):
-    def setup(self, kls, **expected):
+    def setup(self, kls, *validators, **expected):
         self.kls = kls
         self.expected = expected
+        self.validators = validators
         self.expected_spec = set_options(**expected)
 
     def normalise_filled(self, meta, val):
@@ -258,6 +259,8 @@ class create_spec(Spec):
         if isinstance(val, self.kls):
             return val
 
+        for validator in self.validators:
+            validator.normalise(meta, val)
         values = self.expected_spec.normalise(meta, val)
         result = dict((key, values[key]) for key in self.expected)
         return self.kls(**result)

@@ -2,6 +2,7 @@
 
 from input_algorithms.spec_base import Spec, NotSpecified, pass_through_spec, always_same_spec
 from input_algorithms.errors import BadSpec, BadSpecValue, BadDirectory, BadFilename
+from input_algorithms.objs import objMaker
 from input_algorithms import spec_base as sb
 from input_algorithms.meta import Meta
 
@@ -589,6 +590,27 @@ describe TestCase, "create_spec":
         self.assertEqual(spec.expected, {"a": opt1, "b": opt2})
         self.assertEqual(spec.expected_spec, set_options_instance)
         set_options.assert_called_once_with(a=opt1, b=opt2)
+
+    it "validates using provided validators":
+        v1 = mock.Mock(name="v1")
+        v2 = mock.Mock(name="v2")
+        called = []
+
+        v1.normalise.side_effect = lambda m, v: called.append(1)
+        v2.normalise.side_effect = lambda m, v: called.append(2)
+
+        kls = objMaker("kls", "blah")
+        val = {"blah": "stuff"}
+
+        spec = sb.create_spec(kls, v1, v2, blah=sb.string_spec())
+        self.assertEqual(spec.validators, (v1, v2))
+
+        # Normalising with the create_spec will call validators first
+        spec.normalise(self.meta, val)
+
+        v1.normalise.assert_called_once_with(self.meta, val)
+        v2.normalise.assert_called_once_with(self.meta, val)
+        self.assertEqual(called, [1, 2])
 
     it "returns value as is if already an instance of our kls":
         kls = type("kls", (object, ), {})
