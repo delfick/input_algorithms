@@ -126,3 +126,26 @@ describe TestCase, "regexed":
         with self.fuzzyAssertRaisesError(BadSpecValue, "Expected value to match regex, it didn't", spec="blah", meta=self.meta, val=val):
             va.regexed("meh", "m.+", "blah", "other").normalise(self.meta, val)
 
+describe TestCase, "deprecated_key":
+    before_each:
+        self.meta = mock.Mock(name="meta")
+
+    it "takes in key and a reason":
+        key = mock.Mock(name="key")
+        reason = mock.Mock(name="reason")
+        dk = va.deprecated_key(key, reason)
+        self.assertIs(dk.key, key)
+        self.assertIs(dk.reason, reason)
+
+    it "complains if the key is in the value":
+        key = mock.Mock(name="key")
+        reason = mock.Mock(name="reason")
+        with self.fuzzyAssertRaisesError(DeprecationWarning, "The key {0} is deprecated: {1}".format(key, reason)):
+            va.deprecated_key(key, reason).normalise(self.meta, {key: 1})
+
+    it "doesn't complain if the key is not in the value":
+        key = mock.Mock(name="key")
+        reason = mock.Mock(name="reason")
+        va.deprecated_key(key, reason).normalise(self.meta, {})
+        assert True
+

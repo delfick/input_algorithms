@@ -44,3 +44,13 @@ class regexed(Validator):
                 raise BadSpecValue("Expected value to match regex, it didn't", spec=spec, meta=meta, val=val)
         return val
 
+class deprecated_key(Validator):
+    def setup(self, key, reason):
+        self.key = key
+        self.reason = reason
+
+    def validate(self, meta, val):
+        """Complain if the key is in val"""
+        if self.key in val:
+            raise DeprecationWarning("The key {0} is deprecated: {1}".format(self.key, self.reason))
+
