@@ -63,10 +63,10 @@ describe TestCase, "Meta":
             self.assertEqual(meta.path, "one.two[3][4].five")
 
     describe "Finding the source of something":
-        it "returns unknown with path if everything has no source_for":
+        it "returns unknown source_for":
             everything = mock.Mock(name="everything", spec=[])
             meta = Meta(everything, [("one", ""), ("two", "[3]")])
-            self.assertEqual(meta.source, "<unknown>(one.two[3])")
+            self.assertEqual(meta.source, "<unknown>")
 
         it "asks everything for source if it has source_for":
             path = mock.Mock(name="path")

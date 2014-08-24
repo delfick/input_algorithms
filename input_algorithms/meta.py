@@ -34,7 +34,7 @@ class Meta(object):
     def source(self):
         """Return the source path of this value"""
         if not hasattr(self.everything, "source_for"):
-            return "<unknown>({0})".format(self.path)
+            return "<unknown>"
         else:
             return self.everything.source_for(self._path)
 
