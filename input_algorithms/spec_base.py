@@ -279,7 +279,28 @@ class or_spec(Spec):
                 errors.append(error)
 
         # If made it this far, none of the specs passed :(
-        raise BadSpecValue("Value doesn't match any of the options", meta=meta, val=val,  _errors=errors)
+        raise BadSpecValue("Value doesn't match any of the options", meta=meta, val=val, _errors=errors)
+
+class and_spec(Spec):
+    def setup(self, *specs):
+        self.specs = specs
+
+    def normalise_filled(self, meta, val):
+        """Try all the specs"""
+        errors = []
+        transformations = [val]
+        for spec in self.specs:
+            try:
+                val = spec.normalise(meta, val)
+                transformations.append(val)
+            except BadSpec as error:
+                errors.append(error)
+                break
+
+        if errors:
+            raise BadSpecValue("Value didn't match one of the options", meta=meta, transformations=transformations, _errors=errors)
+        else:
+            return val
 
 class optional_spec(Spec):
     def setup(self, spec):

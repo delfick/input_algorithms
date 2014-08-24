@@ -699,6 +699,44 @@ describe TestCase, "or_spec":
         self.spec2.normalise.assert_called_once_with(self.meta, self.val)
         self.spec3.normalise.assert_called_once_with(self.meta, self.val)
 
+describe TestCase, "and_spec":
+    before_each:
+        self.val = mock.Mock(name="val")
+        self.meta = mock.Mock(name="meta", spec_set=Meta)
+        self.spec1 = mock.Mock(name="spec1")
+        self.spec2 = mock.Mock(name="spec2")
+        self.spec3 = mock.Mock(name="spec3")
+
+    it "takes in specs as positional arguments":
+        spec = sb.or_spec(self.spec1, self.spec3, self.spec2)
+        self.assertEqual(spec.specs, (self.spec1, self.spec3, self.spec2))
+
+    it "puts successive values through all specs":
+        val1 = mock.Mock(name="val1")
+        val2 = mock.Mock(name="val2")
+        result = mock.Mock(name="result")
+        self.spec1.normalise.return_value = val1
+        self.spec2.normalise.return_value = val2
+        self.spec3.normalise.return_value = result
+        self.assertIs(sb.and_spec(self.spec1, self.spec2, self.spec3).normalise(self.meta, self.val), result)
+
+        self.spec1.normalise.assert_called_once_with(self.meta, self.val)
+        self.spec2.normalise.assert_called_once_with(self.meta, val1)
+        self.spec3.normalise.assert_called_once_with(self.meta, val2)
+
+    it "raises an error with all transformations if one of them fails":
+        val1 = mock.Mock(name="val1")
+        error = BadSpecValue("error1")
+        self.spec1.normalise.return_value = val1
+        self.spec2.normalise.side_effect = error
+
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Value didn't match one of the options", meta=self.meta, transformations=[self.val, val1], _errors=[error]):
+            sb.and_spec(self.spec1, self.spec2, self.spec3).normalise(self.meta, self.val)
+
+        self.spec1.normalise.assert_called_once_with(self.meta, self.val)
+        self.spec2.normalise.assert_called_once_with(self.meta, val1)
+        self.assertEqual(self.spec3.normalise.mock_calls, [])
+
 describe TestCase, "optional_spec":
     before_each:
         self.val = mock.Mock(name="val")
