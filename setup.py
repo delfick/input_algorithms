@@ -17,6 +17,7 @@ setup(
         [ "nose"
         , "mock"
         , "noseOfYeti"
+        , "namedlist"
         ]
       }
 

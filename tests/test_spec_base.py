@@ -2,7 +2,6 @@
 
 from input_algorithms.spec_base import Spec, NotSpecified, pass_through_spec, always_same_spec
 from input_algorithms.errors import BadSpec, BadSpecValue, BadDirectory, BadFilename
-from input_algorithms.objs import objMaker
 from input_algorithms import spec_base as sb
 from input_algorithms.meta import Meta
 
@@ -10,6 +9,7 @@ from tests.helpers import TestCase
 
 from noseOfYeti.tokeniser.support import noy_sup_setUp
 from option_merge import MergedOptions
+from namedlist import namedlist
 import mock
 import six
 
@@ -599,7 +599,7 @@ describe TestCase, "create_spec":
         v1.normalise.side_effect = lambda m, v: called.append(1)
         v2.normalise.side_effect = lambda m, v: called.append(2)
 
-        kls = objMaker("kls", "blah")
+        kls = namedlist("kls", "blah")
         val = {"blah": "stuff"}
 
         spec = sb.create_spec(kls, v1, v2, blah=sb.string_spec())
