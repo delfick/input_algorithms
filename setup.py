@@ -8,7 +8,7 @@ setup(
     , include_package_data = True
 
      , install_requires =
-       [ 'option_merge>=0.6'
+       [ 'option_merge>=0.7'
        , 'delfick_error>=1.6'
        ]
 
