@@ -9,7 +9,7 @@ setup(
 
      , install_requires =
        [ 'option_merge>=0.6'
-       , 'delfick_error==1.5'
+       , 'delfick_error>=1.6'
        ]
 
     , extras_require =
