@@ -8,7 +8,6 @@ from input_algorithms.meta import Meta
 from tests.helpers import TestCase
 
 from noseOfYeti.tokeniser.support import noy_sup_setUp
-from option_merge import MergedOptions
 from namedlist import namedlist
 import mock
 import six
@@ -141,19 +140,16 @@ describe TestCase, "dictionary specs":
     it "has a default value of an empty dictionary":
         self.assertEqual(self.make_spec().default, {})
 
-    it "complains if the value being normalised is not a dict or MergedOptions":
+    it "complains if the value being normalised is not a dict":
         meta = mock.Mock(name="meta")
         for opt in (0, 1, True, False, [], [1], lambda: 1, "", "asdf", type("blah", (object, ), {})()):
             with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a dictionary", meta=meta, got=type(opt)):
                 self.make_spec().normalise(meta, opt)
 
-    it "works with a dict or MergedOptions":
+    it "works with a dict":
         meta = mock.Mock(name="meta")
         dictoptions = {"a": 1, "b": 2}
         self.assertEqual(self.make_spec().normalise(meta, dictoptions), dictoptions)
-
-        mergedoptions = MergedOptions.using({"a": 1, "b": 2}, {"c": 3, "b": 4})
-        self.assertEqual(self.make_spec().normalise(meta, mergedoptions), {"a": 1, "b": 4, "c": 3})
 
     describe "dictionary_spec":
         make_spec = sb.dictionary_spec
@@ -357,19 +353,16 @@ describe TestCase, "set_options":
     it "defaults to an empty dictionary":
         self.assertEqual(self.so.default, {})
 
-    it "complains if the value being normalised is not a dict or MergedOptions":
+    it "complains if the value being normalised is not a dict":
         meta = mock.Mock(name="meta")
         for opt in (0, 1, True, False, [], [1], lambda: 1, "", "asdf", type("blah", (object, ), {})()):
             with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a dictionary", meta=meta, got=type(opt)):
                 self.so.normalise(meta, opt)
 
-    it "works with a dict or MergedOptions":
+    it "works with a dict":
         meta = mock.Mock(name="meta")
         dictoptions = {"a": 1, "b": 2}
         self.assertEqual(self.so.normalise(meta, dictoptions), dictoptions)
-
-        mergedoptions = MergedOptions.using({"a": 1, "b": 2}, {"c": 3, "b": 4})
-        self.assertEqual(self.so.normalise(meta, mergedoptions), {"a": 1, "b": 4, "c": 3})
 
     it "checks the value of our known options":
         one_spec_result = mock.Mock(name="one_spec_result")

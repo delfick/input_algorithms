@@ -51,8 +51,8 @@ class dictionary_spec(Spec):
         return {}
 
     def normalise_filled(self, meta, val):
-        """Make sure it's a dictionary or MergedOptions"""
-        if not isinstance(val, dict) and not isinstance(val, MergedOptions):
+        """Make sure it's a dictionary"""
+        if not isinstance(val, dict):
             raise BadSpecValue("Expected a dictionary", meta=meta, got=type(val))
 
         return val
