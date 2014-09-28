@@ -144,7 +144,9 @@ class set_options(Spec):
             val = result.get(key, NotSpecified)
 
             try:
-                result[key] = spec.normalise(meta.at(key), val)
+                normalised = spec.normalise(meta.at(key), val)
+                if normalised is not val:
+                    result[key] = spec.normalise(meta.at(key), val)
             except BadSpec as error:
                 errors.append(error)
 
