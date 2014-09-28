@@ -1,6 +1,5 @@
 from input_algorithms.errors import BadSpec, BadSpecValue, BadDirectory, BadFilename
 
-from option_merge import MergedOptions
 import operator
 import six
 import os
@@ -134,7 +133,7 @@ class set_options(Spec):
 
     def normalise_filled(self, meta, val):
         """Fill out a dictionary with what we want as well as the remaining extra"""
-        if not isinstance(val, dict) and not isinstance(val, MergedOptions):
+        if not isinstance(val, dict):
             raise BadSpecValue("Expected a dictionary", meta=meta, got=type(val))
 
         result = val
