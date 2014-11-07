@@ -255,6 +255,10 @@ class create_spec(Spec):
         self.validators = validators
         self.expected_spec = set_options(**expected)
 
+    @property
+    def default(self):
+        return {}
+
     def normalise_filled(self, meta, val):
         """If val is already our expected kls, return it, otherwise instantiate it"""
         if isinstance(val, self.kls):
