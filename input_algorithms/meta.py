@@ -23,7 +23,12 @@ class Meta(object):
     def path(self):
         """Return the path as a string"""
         complete = []
-        for name, extra in self._path:
+        for part in self._path:
+            if isinstance(part, six.string_types):
+                name, extra = part, ""
+            else:
+                name, extra = part
+
             if name and complete:
                 complete.append(".")
             if name or extra:
