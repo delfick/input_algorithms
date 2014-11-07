@@ -267,7 +267,7 @@ class create_spec(Spec):
         for validator in self.validators:
             validator.normalise(meta, val)
         values = self.expected_spec.normalise(meta, val)
-        result = dict((key, values[key]) for key in self.expected)
+        result = dict((key, values.get(key)) for key in self.expected)
         return self.kls(**result)
 
 class or_spec(Spec):
