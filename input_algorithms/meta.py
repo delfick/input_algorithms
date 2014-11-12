@@ -2,12 +2,16 @@ import six
 
 class Meta(object):
     """Holds information about some value"""
-    def __init__(self, everything, path):
+    everything = None
+    format_options = None
+
+    def __init__(self, everything, path, format_options=None):
         self._path = path
         if isinstance(self._path, six.string_types):
             self._path = [(self._path, "")]
 
         self.everything = everything
+        self.format_options = format_options
 
     def indexed_at(self, index):
         return self.new_path([("", "[{0}]".format(index))])
@@ -18,6 +22,10 @@ class Meta(object):
     def new_path(self, part):
         """Return a new instance of this class with additional path part"""
         return self.__class__(self.everything, self._path + part)
+
+    def last_key(self):
+        """Return the value of the last part of the path"""
+        return ''.join(self._path[-1])
 
     @property
     def path(self):

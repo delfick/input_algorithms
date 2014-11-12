@@ -334,3 +334,24 @@ class dict_from_bool_spec(Spec):
             val = self.dict_maker(meta, val)
         return self.spec.normalise(meta, val)
 
+class formatted(Spec):
+    def setup(self, spec, formatter, expected_type=NotSpecified):
+        self.spec = spec
+        self.formatter = formatter
+        self.expected_type = expected_type
+        self.has_expected_type = self.expected_type and self.expected_type is not NotSpecified
+
+    def normalise_filled(self, meta, val):
+        """Format the value"""
+        options = meta.everything.__class__({"_key_name": meta.last_key()})
+        options.update(meta.everything)
+
+        specd = self.spec.normalise(meta, val)
+        formatted = self.formatter(options, meta.path, value=specd).format()
+
+        if self.has_expected_type:
+            if not isinstance(formatted, self.expected_type):
+                raise BadSpecValue("Expected a different type", got=type(formatted), expected=self.expected_type)
+
+        return formatted
+

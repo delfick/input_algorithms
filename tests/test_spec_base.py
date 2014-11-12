@@ -786,3 +786,62 @@ describe TestCase, "dict_from_bool_spec":
         self.assertIs(sb.dict_from_bool_spec(lambda: 1, self.spec).normalise(self.meta, val), result)
         self.spec.normalise.assert_called_once_with(self.meta, val)
 
+describe TestCase, "formatted":
+    before_each:
+        self.val = mock.Mock(name="val")
+        self.meta = mock.Mock(name="meta", spec_set=Meta)
+        self.spec = mock.Mock(name="spec")
+
+    it "takes in spec, formatter and expected_type":
+        spec = mock.Mock(name="spec")
+        formatter = mock.Mock(name="formatter")
+        expected_type = mock.Mock(name="expected_type")
+        formatted = sb.formatted(spec, formatter, expected_type)
+        self.assertIs(formatted.spec, spec)
+        self.assertIs(formatted.formatter, formatter)
+        self.assertIs(formatted.expected_type, expected_type)
+
+    it "uses the formatter":
+        meta_path = mock.Mock(name="path")
+        options = mock.Mock(name="options")
+        meta_class = mock.Mock(name="meta_class")
+        meta_class.return_value = options
+
+        self.meta.path = meta_path
+        self.meta.everything = mock.Mock(name="everything", __class__=meta_class)
+
+        last_key = mock.Mock(name="last_key")
+        self.meta.last_key.return_value = last_key
+
+        formatter = mock.Mock(name="formatter")
+        formatter_instance = mock.Mock(name="formatter_instance")
+        formatter.return_value = formatter_instance
+
+        formatted = mock.Mock(name="formatted")
+        formatter_instance.format.return_value = formatted
+
+        specd = mock.Mock(name="specd")
+        self.spec.normalise.return_value = specd
+
+        self.assertIs(sb.formatted(self.spec, formatter, expected_type=mock.Mock).normalise(self.meta, self.val), formatted)
+        formatter_instance.format.assert_called_once()
+        formatter.assert_called_once_with(options, meta_path, value=specd)
+
+        meta_class.assert_called_once_with({"_key_name": last_key})
+        options.update.assert_called_once_with(self.meta.everything)
+
+        self.spec.normalise.assert_called_once_with(self.meta, self.val)
+
+    it "complains if formatted value has wrong type":
+        formatter = lambda *args, **kwargs: "asdf"
+        spec = sb.any_spec()
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a different type", expected=mock.Mock, got=str):
+            sb.formatted(spec, formatter, expected_type=mock.Mock).normalise(self.meta, self.val)
+
+    it "works with normal dictionary meta.everything":
+        formatter = lambda *args, **kwargs: "asdf"
+        spec = sb.any_spec()
+        self.meta.everything = {"blah": 1}
+        res = sb.formatted(spec, formatter).normalise(self.meta, self.val)
+        self.assertEqual(res, "asdf")
+
