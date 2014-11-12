@@ -355,3 +355,14 @@ class formatted(Spec):
 
         return formatted
 
+class overridden(Spec):
+    def setup(self, value):
+        self.value = value
+
+    def normalise(self, meta, val):
+        return self.value
+
+class any_spec(Spec):
+    def normalise(self, meta, val):
+        return val
+

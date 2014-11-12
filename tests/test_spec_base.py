@@ -845,3 +845,16 @@ describe TestCase, "formatted":
         res = sb.formatted(spec, formatter).normalise(self.meta, self.val)
         self.assertEqual(res, "asdf")
 
+describe TestCase, "overridden":
+    it "returns the value it's initialised with":
+        meta = mock.Mock(name="meta", spec=[])
+        value = mock.Mock(name="value", spec=[])
+        override = mock.Mock(name="override", spec=[])
+        self.assertIs(sb.overridden(override).normalise(meta, value), override)
+
+describe TestCase, "any_spec":
+    it "returns the value it's given":
+        meta = mock.Mock(name="meta", spec=[])
+        value = mock.Mock(name="value", spec=[])
+        self.assertIs(sb.any_spec().normalise(meta, value), value)
+
