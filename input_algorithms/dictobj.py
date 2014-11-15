@@ -30,7 +30,7 @@ class dictobj(dict):
 
     def __getattr__(self, key):
         """Pretend object access"""
-        if hasattr(self, key):
+        if key not in self:
             return object.__getattribute__(self, key)
 
         try:
