@@ -355,6 +355,17 @@ class formatted(Spec):
 
         return formatted
 
+class retrieved(Spec):
+    def setup(self, spec, formatter, expected_type=NotSpecified):
+        self.spec = spec
+        self.formatter = formatter
+        self.expected_type = expected_type
+
+    def normalise_either(self, meta, val):
+        """Format the formatted spec"""
+        key = formatted(string_spec(), formatter=self.formatter, expected_type=(str, unicode)).normalise(meta, self.spec.normalise(meta, val))
+        return formatted(key, formatter=self.formatter, expected_type=self.expected_type)
+
 class overridden(Spec):
     def setup(self, value):
         self.value = value
