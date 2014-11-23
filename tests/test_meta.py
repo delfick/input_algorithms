@@ -69,7 +69,7 @@ describe TestCase, "Meta":
             self.assertEqual(meta.source, "<unknown>")
 
         it "asks everything for source if it has source_for":
-            path = mock.Mock(name="path")
+            path = [(unicode(mock.Mock(name="path")), '')]
             source = mock.Mock(name="source")
             source_for = mock.Mock(name="source_for")
             everything = mock.Mock(name="everything")
@@ -77,7 +77,7 @@ describe TestCase, "Meta":
 
             meta = Meta(everything, path)
             self.assertEqual(meta.source, source)
-            everything.source_for.assert_called_once_with(path)
+            everything.source_for.assert_called_once_with(path[0][0])
 
     describe "Formatting in a delfick error":
         it "formats with source and path":

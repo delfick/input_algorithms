@@ -23,9 +23,11 @@ class Meta(object):
         """Return a new instance of this class with additional path part"""
         return self.__class__(self.everything, self._path + part)
 
-    def last_key(self):
-        """Return the value of the last part of the path"""
-        return ''.join(self._path[-1])
+    @property
+    def second_last_key(self):
+        """Return the value of the second last part of the path"""
+        if len(self._path) > 1:
+            return self._path[-2][0]
 
     @property
     def path(self):

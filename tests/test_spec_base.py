@@ -810,8 +810,8 @@ describe TestCase, "formatted":
         self.meta.path = meta_path
         self.meta.everything = mock.Mock(name="everything", __class__=meta_class)
 
-        last_key = mock.Mock(name="last_key")
-        self.meta.last_key.return_value = last_key
+        second_last_key = mock.Mock(name="second_last_key")
+        self.meta.second_last_key = second_last_key
 
         formatter = mock.Mock(name="formatter")
         formatter_instance = mock.Mock(name="formatter_instance")
