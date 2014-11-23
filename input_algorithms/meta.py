@@ -46,12 +46,17 @@ class Meta(object):
         return "".join(complete)
 
     @property
+    def nonspecial_path(self):
+        """Return the path as a string without extra strings"""
+        return ".".join(part for part, _ in self._path if part)
+
+    @property
     def source(self):
         """Return the source path of this value"""
         if not hasattr(self.everything, "source_for"):
             return "<unknown>"
         else:
-            return self.everything.source_for(self._path)
+            return self.everything.source_for(self.nonspecial_path)
 
     def delfick_error_format(self, key):
         """Format a string for display in a delfick error"""
