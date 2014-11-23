@@ -136,16 +136,15 @@ class set_options(Spec):
         if not isinstance(val, dict):
             raise BadSpecValue("Expected a dictionary", meta=meta, got=type(val))
 
-        result = val
+        result = {}
         errors = []
 
         for key, spec in self.options.items():
-            val = result.get(key, NotSpecified)
+            nxt = val.get(key, NotSpecified)
 
             try:
-                normalised = spec.normalise(meta.at(key), val)
-                if normalised is not val:
-                    result[key] = normalised
+                normalised = spec.normalise(meta.at(key), nxt)
+                result[key] = normalised
             except BadSpec as error:
                 errors.append(error)
 
@@ -267,7 +266,7 @@ class create_spec(Spec):
         for validator in self.validators:
             validator.normalise(meta, val)
         values = self.expected_spec.normalise(meta, val)
-        result = dict((key, values.get(key)) for key in self.expected)
+        result = dict((key, values.get(key, NotSpecified)) for key in self.expected)
         return self.kls(**result)
 
 class or_spec(Spec):

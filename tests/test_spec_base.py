@@ -359,10 +359,16 @@ describe TestCase, "set_options":
             with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a dictionary", meta=meta, got=type(opt)):
                 self.so.normalise(meta, opt)
 
-    it "works with a dict":
+    it "Ignores options that aren't specified":
         meta = mock.Mock(name="meta")
-        dictoptions = {"a": 1, "b": 2}
-        self.assertEqual(self.so.normalise(meta, dictoptions), dictoptions)
+        dictoptions = {"a": "1", "b": "2"}
+        self.assertEqual(self.so.normalise(meta, dictoptions), {})
+
+        self.so.options = {"a": sb.string_spec()}
+        self.assertEqual(self.so.normalise(meta, dictoptions), {"a": "1"})
+
+        self.so.options = {"a": sb.string_spec(), "b": sb.string_spec()}
+        self.assertEqual(self.so.normalise(meta, dictoptions), {"a": "1", "b": "2"})
 
     it "checks the value of our known options":
         one_spec_result = mock.Mock(name="one_spec_result")
@@ -374,7 +380,7 @@ describe TestCase, "set_options":
         two_spec.normalise.return_value = two_spec_result
 
         self.so.options = {"one": one_spec, "two": two_spec}
-        self.assertEqual(self.so.normalise(self.meta, {"one": 1, "two": 2, "three": 3}), {"one": one_spec_result, "two": two_spec_result, "three": 3})
+        self.assertEqual(self.so.normalise(self.meta, {"one": 1, "two": 2}), {"one": one_spec_result, "two": two_spec_result})
 
     it "collects errors":
         one_spec_error = BadSpecValue("Bad one")
@@ -827,14 +833,15 @@ describe TestCase, "formatted":
         formatter_instance.format.assert_called_once()
         formatter.assert_called_once_with(options, meta_path, value=specd)
 
-        meta_class.assert_called_once_with({"_key_name": last_key})
-        options.update.assert_called_once_with(self.meta.everything)
+        meta_class.assert_called_once()
+        options.update.assert_has_calls([mock.call({"_key_name": second_last_key}), mock.call(self.meta.everything)])
 
         self.spec.normalise.assert_called_once_with(self.meta, self.val)
 
     it "complains if formatted value has wrong type":
         formatter = lambda *args, **kwargs: "asdf"
         spec = sb.any_spec()
+        self.meta.everything = {}
         with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a different type", expected=mock.Mock, got=str):
             sb.formatted(spec, formatter, expected_type=mock.Mock).normalise(self.meta, self.val)
 
