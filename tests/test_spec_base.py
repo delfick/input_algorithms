@@ -816,8 +816,8 @@ describe TestCase, "formatted":
         self.meta.path = meta_path
         self.meta.everything = mock.Mock(name="everything", __class__=meta_class)
 
-        second_last_key = mock.Mock(name="second_last_key")
-        self.meta.second_last_key = second_last_key
+        key_names = mock.Mock(name="key_names")
+        self.meta.key_names = key_names
 
         formatter = mock.Mock(name="formatter")
         formatter_instance = mock.Mock(name="formatter_instance")
@@ -834,7 +834,7 @@ describe TestCase, "formatted":
         formatter.assert_called_once_with(options, meta_path, value=specd)
 
         meta_class.assert_called_once()
-        options.update.assert_has_calls([mock.call({"_key_name": second_last_key}), mock.call(self.meta.everything)])
+        self.assertEqual(len(options.update.mock_calls), 2)
 
         self.spec.normalise.assert_called_once_with(self.meta, self.val)
 
@@ -842,6 +842,7 @@ describe TestCase, "formatted":
         formatter = lambda *args, **kwargs: "asdf"
         spec = sb.any_spec()
         self.meta.everything = {}
+        self.meta.key_names.return_value = {}
         with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a different type", expected=mock.Mock, got=str):
             sb.formatted(spec, formatter, expected_type=mock.Mock).normalise(self.meta, self.val)
 
@@ -849,6 +850,7 @@ describe TestCase, "formatted":
         formatter = lambda *args, **kwargs: "asdf"
         spec = sb.any_spec()
         self.meta.everything = {"blah": 1}
+        self.meta.key_names.return_value = {}
         res = sb.formatted(spec, formatter).normalise(self.meta, self.val)
         self.assertEqual(res, "asdf")
 

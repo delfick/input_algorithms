@@ -343,7 +343,7 @@ class formatted(Spec):
     def normalise_filled(self, meta, val):
         """Format the value"""
         options = meta.everything.__class__()
-        options.update({"_key_name": meta.second_last_key})
+        options.update(meta.key_names())
         options.update(meta.everything)
 
         specd = self.spec.normalise(meta, val)

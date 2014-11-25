@@ -90,3 +90,9 @@ describe TestCase, "Meta":
 
             self.assertEqual(meta.delfick_error_format("blah"), "{{source={0}, path=one.three.five[1]}}".format(source))
 
+    describe "Getting key names":
+        it "returns all the parts of the path as _key_name_i":
+            path = [("one", ""), ("two", "[]"), ("three", "")]
+            meta = Meta(None, path)
+            self.assertEqual(meta.key_names(), {"_key_name_0": "three", "_key_name_1": "two", "_key_name_2": "one"})
+

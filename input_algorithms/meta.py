@@ -23,11 +23,9 @@ class Meta(object):
         """Return a new instance of this class with additional path part"""
         return self.__class__(self.everything, self._path + part)
 
-    @property
-    def second_last_key(self):
-        """Return the value of the second last part of the path"""
-        if len(self._path) > 1:
-            return self._path[-2][0]
+    def key_names(self):
+        """Return {_key_name_<i>: <i'th part of part} for each part in the path reversed"""
+        return dict(("_key_name_{0}".format(index), val) for index, (val, _) in enumerate(reversed(self._path)))
 
     @property
     def path(self):
