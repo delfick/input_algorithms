@@ -54,7 +54,10 @@ class Meta(object):
         if not hasattr(self.everything, "source_for"):
             return "<unknown>"
         else:
-            return self.everything.source_for(self.nonspecial_path)
+            try:
+                return self.everything.source_for(self.nonspecial_path)
+            except KeyError:
+                return "<unknown>"
 
     def delfick_error_format(self, key):
         """Format a string for display in a delfick error"""

@@ -79,6 +79,15 @@ describe TestCase, "Meta":
             self.assertEqual(meta.source, source)
             everything.source_for.assert_called_once_with(path[0][0])
 
+        it "catches KeyError from finding the source":
+            path = [(unicode(mock.Mock(name="path")), '')]
+            everything = mock.Mock(name="everything")
+            everything.source_for.side_effect = KeyError("path")
+
+            meta = Meta(everything, path)
+            self.assertEqual(meta.source, "<unknown>")
+            everything.source_for.assert_called_once_with(path[0][0])
+
     describe "Formatting in a delfick error":
         it "formats with source and path":
             path = mock.Mock(name="path")
