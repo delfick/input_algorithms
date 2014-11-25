@@ -266,7 +266,10 @@ class create_spec(Spec):
         for validator in self.validators:
             validator.normalise(meta, val)
         values = self.expected_spec.normalise(meta, val)
-        result = dict((key, values.get(key, NotSpecified)) for key in self.expected)
+        result = getattr(meta, 'base', {})
+        for key in self.expected:
+            result[key] = None
+            result[key] = values.get(key, NotSpecified)
         return self.kls(**result)
 
 class or_spec(Spec):
