@@ -358,7 +358,7 @@ class formatted(Spec):
 
         return formatted
 
-class retrieved(Spec):
+class many_format(Spec):
     def setup(self, spec, formatter, expected_type=NotSpecified):
         self.spec = spec
         self.formatter = formatter
@@ -366,8 +366,23 @@ class retrieved(Spec):
 
     def normalise_either(self, meta, val):
         """Format the formatted spec"""
-        key = formatted(string_spec(), formatter=self.formatter, expected_type=(str, unicode)).normalise(meta, self.spec.normalise(meta, val))
-        return formatted(key, formatter=self.formatter, expected_type=self.expected_type)
+        val = self.spec.normalise(meta, val)
+        done = []
+
+        while True:
+            fm = formatted(string_spec(), formatter=self.formatter, expected_type=(str, unicode))
+            normalised = fm.normalise(meta, val)
+            if normalised == val:
+                break
+
+            if normalised in done:
+                done.append(normalised)
+                raise BadSpecValue("Recursive formatting", done=done, meta=meta)
+            else:
+                done.append(normalised)
+                val = normalised
+
+        return formatted(string_spec(), formatter=self.formatter, expected_type=self.expected_type).normalise(meta, "{{{0}}}".format(val))
 
 class overridden(Spec):
     def setup(self, value):
