@@ -25,7 +25,7 @@ class Spec(object):
             if hasattr(self, "normalise_empty"):
                 return self.normalise_empty(meta)
             elif hasattr(self, "default"):
-                return self.default
+                return self.default(meta)
             else:
                 return val
         elif hasattr(self, "normalise_filled"):
@@ -45,8 +45,7 @@ class always_same_spec(Spec):
         return self.result
 
 class dictionary_spec(Spec):
-    @property
-    def default(self):
+    def default(self, meta):
         return {}
 
     def normalise_filled(self, meta, val):
@@ -90,8 +89,7 @@ class listof(Spec):
         self.spec = spec
         self.expect = expect
 
-    @property
-    def default(self):
+    def default(self, meta):
         return []
 
     def normalise_filled(self, meta, val):
@@ -127,8 +125,7 @@ class set_options(Spec):
     def setup(self, **options):
         self.options = options
 
-    @property
-    def default(self):
+    def default(self, meta):
         return {}
 
     def normalise_filled(self, meta, val):
@@ -156,7 +153,7 @@ class set_options(Spec):
 class defaulted(Spec):
     def setup(self, spec, dflt):
         self.spec = spec
-        self.default = dflt
+        self.default = lambda s: dflt
 
     def normalise_filled(self, meta, val):
         """Proxy our spec"""
@@ -183,8 +180,14 @@ class boolean(Spec):
             return val
 
 class directory_spec(Spec):
+    def setup(self, spec=NotSpecified):
+        self.spec = spec
+
     def normalise_filled(self, meta, val):
         """Complain if not a meta to a directory"""
+        if self.spec is not NotSpecified:
+            val = self.spec.normalise(meta, val)
+
         if not isinstance(val, six.string_types):
             raise BadDirectory("Didn't even get a string", meta=meta, got=type(val))
         elif not os.path.exists(val):
@@ -207,8 +210,7 @@ class filename_spec(Spec):
             return val
 
 class string_spec(Spec):
-    @property
-    def default(self):
+    def default(self, meta):
         return ""
 
     def normalise_filled(self, meta, val):
@@ -254,9 +256,8 @@ class create_spec(Spec):
         self.validators = validators
         self.expected_spec = set_options(**expected)
 
-    @property
-    def default(self):
-        return {}
+    def default(self, meta):
+        return self.kls(**self.expected_spec.normalise(meta, {}))
 
     def normalise_filled(self, meta, val):
         """If val is already our expected kls, return it, otherwise instantiate it"""

@@ -94,9 +94,11 @@ describe TestCase, "Spec":
                     val = NotSpecified
                     meta = mock.Mock(name="meta")
                     default = mock.Mock(name="default")
+                    default_method = mock.Mock(name="default_method", return_value=default)
 
-                    Specd = type("Specd", (Spec, ), {"default": default})
+                    Specd = type("Specd", (Spec, ), {"default": default_method})
                     self.assertIs(Specd().normalise(meta, val), default)
+                    default_method.assert_called_once_with(meta)
 
                 it "returns NotSpecified otherwise":
                     val = NotSpecified
@@ -137,8 +139,11 @@ describe TestCase, "dictionary specs":
     def make_spec(self):
         raise NotImplementedError()
 
+    before_each:
+        self.meta = mock.Mock(name="meta")
+
     it "has a default value of an empty dictionary":
-        self.assertEqual(self.make_spec().default, {})
+        self.assertEqual(self.make_spec().default(self.meta), {})
 
     it "complains if the value being normalised is not a dict":
         meta = mock.Mock(name="meta")
@@ -236,7 +241,7 @@ describe TestCase, "listof":
         self.assertEqual(lo.expect, NotSpecified)
 
     it "has a default value of an empty list":
-        self.assertEqual(self.lo.default, [])
+        self.assertEqual(self.lo.default(self.meta), [])
 
     it "turns the value into a list if not already a list":
         for opt in (0, 1, True, False, {}, {1:1}, lambda: 1, "", "asdf", type("blah", (object, ), {})()):
@@ -351,7 +356,7 @@ describe TestCase, "set_options":
         self.assertEqual(spec.options, dict(a=m1, b=m2))
 
     it "defaults to an empty dictionary":
-        self.assertEqual(self.so.default, {})
+        self.assertEqual(self.so.default(self.meta), {})
 
     it "complains if the value being normalised is not a dict":
         meta = mock.Mock(name="meta")
@@ -407,10 +412,10 @@ describe TestCase, "defaulted":
         spec = mock.Mock(name="spec")
         dfltd = sb.defaulted(spec, dflt)
         self.assertEqual(dfltd.spec, spec)
-        self.assertEqual(dfltd.default, dflt)
+        self.assertEqual(dfltd.default(self.meta), dflt)
 
     it "defaults to the dflt":
-        self.assertIs(self.dfltd.default, self.dflt)
+        self.assertIs(self.dfltd.default(self.meta), self.dflt)
         self.assertIs(self.dfltd.normalise(self.meta, NotSpecified), self.dflt)
 
     it "proxies the spec if a value is provided":
@@ -511,7 +516,7 @@ describe TestCase, "string_specs":
         raise NotImplementedError()
 
     it "defaults to an empty string":
-        self.assertEqual(sb.string_spec().default, "")
+        self.assertEqual(sb.string_spec().default(self.meta), "")
 
     it "complains if the value isn't a string":
         for opt in (0, 1, True, False, {}, {1:1}, [], [1], lambda: 1, type("blah", (object, ), {})()):
