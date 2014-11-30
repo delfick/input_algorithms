@@ -183,7 +183,7 @@ class directory_spec(Spec):
     def setup(self, spec=NotSpecified):
         self.spec = spec
 
-    def normalise_filled(self, meta, val):
+    def normalise_either(self, meta, val):
         """Complain if not a meta to a directory"""
         if self.spec is not NotSpecified:
             val = self.spec.normalise(meta, val)
