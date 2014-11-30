@@ -30,18 +30,33 @@ class dictobj(dict):
 
     def __getattr__(self, key):
         """Pretend object access"""
-        if key not in self:
+        key = unicode(key)
+        if key not in self or hasattr(self.__class__, key):
             return object.__getattribute__(self, key)
 
         try:
-            return self[key]
+            return super(dictobj, self).__getitem__(key)
         except KeyError as e:
             if e.message == key:
                 raise AttributeError(key)
             else:
                 raise
 
+    def __getitem__(self, key):
+        key = unicode(key)
+        if key not in self or hasattr(self.__class__, key):
+            return object.__getattribute__(self, key)
+        else:
+            return super(dictobj, self).__getitem__(key)
+
     def __setattr__(self, key, val):
         """Pretend object setter access"""
+        if hasattr(self.__class__, key):
+            object.__setattr__(self, key, val)
         self[key] = val
+
+    def __setitem__(self, key, val):
+        if hasattr(self.__class__, key):
+            object.__setattr__(self, key, val)
+        super(dictobj, self).__setitem__(key, val)
 
