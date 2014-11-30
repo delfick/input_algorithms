@@ -344,7 +344,7 @@ class formatted(Spec):
         self.expected_type = expected_type
         self.has_expected_type = self.expected_type and self.expected_type is not NotSpecified
 
-    def normalise_filled(self, meta, val):
+    def normalise_either(self, meta, val):
         """Format the value"""
         options = meta.everything.__class__()
         options.update(meta.key_names())
