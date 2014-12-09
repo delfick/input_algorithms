@@ -7,6 +7,21 @@ import os
 class NotSpecified(object):
     """Tell the difference between None and not specified"""
 
+def apply_validators(meta, val, validators, chain_value=True):
+    errors = []
+    for validator in validators:
+        try:
+            nxt = validator.normalise(meta, val)
+            if chain_value:
+                val = nxt
+        except BadSpecValue as e:
+            errors.append(e)
+
+    if errors:
+        raise BadSpecValue("Failed to validate", meta=meta, _errors=errors)
+
+    return val
+
 class Spec(object):
     def __init__(self, *pargs, **kwargs):
         self.pargs = pargs
@@ -142,7 +157,7 @@ class set_options(Spec):
             try:
                 normalised = spec.normalise(meta.at(key), nxt)
                 result[key] = normalised
-            except BadSpec as error:
+            except (BadSpec, BadSpecValue) as error:
                 errors.append(error)
 
         if errors:
@@ -237,11 +252,7 @@ class valid_string_spec(string_spec):
     def normalise_filled(self, meta, val):
         """Make sure if there is a value, that it is valid"""
         val = super(valid_string_spec, self).normalise_filled(meta, val)
-
-        for validator in self.validators:
-            val = validator.normalise(meta, val)
-
-        return val
+        return apply_validators(meta, val, self.validators)
 
 class string_choice_spec(string_spec):
     def setup(self, choices, reason=NotSpecified):
@@ -274,8 +285,7 @@ class create_spec(Spec):
         if isinstance(val, self.kls):
             return val
 
-        for validator in self.validators:
-            validator.normalise(meta, val)
+        apply_validators(meta, val, self.validators, chain_value=False)
         values = self.expected_spec.normalise(meta, val)
         result = getattr(meta, 'base', {})
         for key in self.expected:
