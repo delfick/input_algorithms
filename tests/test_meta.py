@@ -69,7 +69,7 @@ describe TestCase, "Meta":
             self.assertEqual(meta.source, "<unknown>")
 
         it "asks everything for source if it has source_for":
-            path = [(unicode(mock.Mock(name="path")), '')]
+            path = [(str(mock.Mock(name="path")), '')]
             source = mock.Mock(name="source")
             source_for = mock.Mock(name="source_for")
             everything = mock.Mock(name="everything")
@@ -80,7 +80,7 @@ describe TestCase, "Meta":
             everything.source_for.assert_called_once_with(path[0][0])
 
         it "catches KeyError from finding the source":
-            path = [(unicode(mock.Mock(name="path")), '')]
+            path = [(str(mock.Mock(name="path")), '')]
             everything = mock.Mock(name="everything")
             everything.source_for.side_effect = KeyError("path")
 

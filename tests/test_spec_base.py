@@ -9,7 +9,6 @@ from tests.helpers import TestCase
 
 from noseOfYeti.tokeniser.support import noy_sup_setUp
 from namedlist import namedlist
-import types
 import mock
 import six
 
@@ -881,7 +880,7 @@ describe TestCase, "string_or_int_as_string_spec":
 
     it "complains if the value is neither string or integer":
         meta = mock.Mock(name="meta")
-        for val, typ in (({}, dict), ({1:2}, dict), (True, bool), (False, bool), (None, types.NoneType), ([], list), ((), tuple), ([1], list), ((1, ), tuple)):
+        for val, typ in (({}, dict), ({1:2}, dict), (True, bool), (False, bool), (None, type(None)), ([], list), ((), tuple), ([1], list), ((1, ), tuple)):
             with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a string or integer", meta=meta, got=typ):
                 sb.string_or_int_as_string_spec().normalise(meta, val)
 
