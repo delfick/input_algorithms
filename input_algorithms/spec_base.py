@@ -235,6 +235,13 @@ class string_spec(Spec):
 
         return val
 
+class integer_spec(Spec):
+    def normalise_filled(self, meta, val):
+        """Make sure it's an integer and convert into one if it's a string"""
+        if not isinstance(val, bool) and (isinstance(val, int) or hasattr(val, "isdigit") and val.isdigit()):
+            return int(val)
+        raise BadSpecValue("Expected an integer", meta=meta, got=type(val))
+
 class string_or_int_as_string_spec(Spec):
     def default(self, meta):
         return ""
