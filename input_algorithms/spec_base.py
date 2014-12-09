@@ -220,6 +220,16 @@ class string_spec(Spec):
 
         return val
 
+class string_or_int_as_string_spec(Spec):
+    def default(self, meta):
+        return ""
+
+    def normalise_filled(self, meta, val):
+        """Make sure it's a string or integer"""
+        if isinstance(val, bool) or (not isinstance(val, six.string_types) and not isinstance(val, six.integer_types)):
+            raise BadSpecValue("Expected a string or integer", meta=meta, got=type(val))
+        return unicode(val)
+
 class valid_string_spec(string_spec):
     def setup(self, *validators):
         self.validators = validators

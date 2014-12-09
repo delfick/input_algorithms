@@ -9,6 +9,7 @@ from tests.helpers import TestCase
 
 from noseOfYeti.tokeniser.support import noy_sup_setUp
 from namedlist import namedlist
+import types
 import mock
 import six
 
@@ -871,4 +872,24 @@ describe TestCase, "any_spec":
         meta = mock.Mock(name="meta", spec=[])
         value = mock.Mock(name="value", spec=[])
         self.assertIs(sb.any_spec().normalise(meta, value), value)
+
+
+describe TestCase, "string_or_int_as_string_spec":
+    it "returns an empty string for the default":
+        meta = mock.Mock(name="meta")
+        self.assertEqual(sb.string_or_int_as_string_spec().normalise(meta, NotSpecified), "")
+
+    it "complains if the value is neither string or integer":
+        meta = mock.Mock(name="meta")
+        for val, typ in (({}, dict), ({1:2}, dict), (True, bool), (False, bool), (None, types.NoneType), ([], list), ((), tuple), ([1], list), ((1, ), tuple)):
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a string or integer", meta=meta, got=typ):
+                sb.string_or_int_as_string_spec().normalise(meta, val)
+
+    it "returns strings as strings":
+        meta = mock.Mock(name="meta")
+        self.assertEqual(sb.string_or_int_as_string_spec().normalise(meta, "blah"), "blah")
+
+    it "returns integers as strings":
+        meta = mock.Mock(name="meta")
+        self.assertEqual(sb.string_or_int_as_string_spec().normalise(meta, 1), "1")
 
