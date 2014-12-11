@@ -506,6 +506,20 @@ describe TestCase, "filename_spec":
         with self.a_temp_file() as filename:
             self.assertEqual(sb.filename_spec().normalise(self.meta, filename), filename)
 
+describe TestCase, "file_spec":
+    before_each:
+        self.meta = mock.Mock(name="meta", spec_set=Meta)
+
+    it "complains if the object is not a file":
+        for opt in ("", "asdf", 0, 1, True, False, {}, {1:1}, [], [1], lambda: 1, type("blah", (object, ), {})()):
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Didn't get a file object", meta=self.meta, got=opt):
+                sb.file_spec().normalise(self.meta, opt)
+
+    it "lets through a file object":
+        with self.a_temp_file() as fle:
+            with open(fle) as opened:
+                self.assertIs(sb.file_spec().normalise(self.meta, opened), opened)
+
 describe TestCase, "string_specs":
     __only_run_tests_in_children__ = True
 

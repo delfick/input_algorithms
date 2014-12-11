@@ -224,6 +224,22 @@ class filename_spec(Spec):
         else:
             return val
 
+class file_spec(Spec):
+    def normalise_filled(self, meta, val):
+        """Complain if not a file object"""
+        bad = False
+        if six.PY2:
+            if not isinstance(val, file):
+                bad = True
+        else:
+            import io
+            if not isinstance(val, io.TextIOBase):
+                bad = True
+
+        if bad:
+            raise BadSpecValue("Didn't get a file object", meta=meta, got=val)
+        return val
+
 class string_spec(Spec):
     def default(self, meta):
         return ""
