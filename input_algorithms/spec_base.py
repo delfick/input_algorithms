@@ -389,7 +389,10 @@ class formatted(Spec):
 
     def normalise_either(self, meta, val):
         """Format the value"""
-        options = meta.everything.__class__()
+        options_opts = {}
+        if hasattr(meta.everything, "converters"):
+            options_opts['converters'] = meta.everything.converters
+        options = meta.everything.__class__(**options_opts)
         options.update(meta.key_names())
         options.update(meta.everything)
 
