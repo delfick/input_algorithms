@@ -30,7 +30,7 @@ class dictobj(dict):
 
     def __getattr__(self, key):
         """Pretend object access"""
-        key = unicode(key)
+        key = str(key)
         if key not in self or hasattr(self.__class__, key):
             return object.__getattribute__(self, key)
 
@@ -43,7 +43,7 @@ class dictobj(dict):
                 raise
 
     def __getitem__(self, key):
-        key = unicode(key)
+        key = str(key)
         if key not in self or hasattr(self.__class__, key):
             return object.__getattribute__(self, key)
         else:
