@@ -60,3 +60,7 @@ class dictobj(dict):
             object.__setattr__(self, key, val)
         super(dictobj, self).__setitem__(key, val)
 
+    def clone(self):
+        """Return a clone of this object"""
+        return self.__class__(**dict((name, self[name]) for name in self.fields))
+
