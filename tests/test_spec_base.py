@@ -94,9 +94,11 @@ describe TestCase, "Spec":
                     val = NotSpecified
                     meta = mock.Mock(name="meta")
                     default = mock.Mock(name="default")
+                    default_method = mock.Mock(name="default_method", return_value=default)
 
-                    Specd = type("Specd", (Spec, ), {"default": default})
+                    Specd = type("Specd", (Spec, ), {"default": default_method})
                     self.assertIs(Specd().normalise(meta, val), default)
+                    default_method.assert_called_once_with(meta)
 
                 it "returns NotSpecified otherwise":
                     val = NotSpecified
@@ -137,8 +139,11 @@ describe TestCase, "dictionary specs":
     def make_spec(self):
         raise NotImplementedError()
 
+    before_each:
+        self.meta = mock.Mock(name="meta")
+
     it "has a default value of an empty dictionary":
-        self.assertEqual(self.make_spec().default, {})
+        self.assertEqual(self.make_spec().default(self.meta), {})
 
     it "complains if the value being normalised is not a dict":
         meta = mock.Mock(name="meta")
@@ -236,7 +241,7 @@ describe TestCase, "listof":
         self.assertEqual(lo.expect, NotSpecified)
 
     it "has a default value of an empty list":
-        self.assertEqual(self.lo.default, [])
+        self.assertEqual(self.lo.default(self.meta), [])
 
     it "turns the value into a list if not already a list":
         for opt in (0, 1, True, False, {}, {1:1}, lambda: 1, "", "asdf", type("blah", (object, ), {})()):
@@ -351,7 +356,7 @@ describe TestCase, "set_options":
         self.assertEqual(spec.options, dict(a=m1, b=m2))
 
     it "defaults to an empty dictionary":
-        self.assertEqual(self.so.default, {})
+        self.assertEqual(self.so.default(self.meta), {})
 
     it "complains if the value being normalised is not a dict":
         meta = mock.Mock(name="meta")
@@ -359,10 +364,16 @@ describe TestCase, "set_options":
             with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a dictionary", meta=meta, got=type(opt)):
                 self.so.normalise(meta, opt)
 
-    it "works with a dict":
+    it "Ignores options that aren't specified":
         meta = mock.Mock(name="meta")
-        dictoptions = {"a": 1, "b": 2}
-        self.assertEqual(self.so.normalise(meta, dictoptions), dictoptions)
+        dictoptions = {"a": "1", "b": "2"}
+        self.assertEqual(self.so.normalise(meta, dictoptions), {})
+
+        self.so.options = {"a": sb.string_spec()}
+        self.assertEqual(self.so.normalise(meta, dictoptions), {"a": "1"})
+
+        self.so.options = {"a": sb.string_spec(), "b": sb.string_spec()}
+        self.assertEqual(self.so.normalise(meta, dictoptions), {"a": "1", "b": "2"})
 
     it "checks the value of our known options":
         one_spec_result = mock.Mock(name="one_spec_result")
@@ -374,7 +385,7 @@ describe TestCase, "set_options":
         two_spec.normalise.return_value = two_spec_result
 
         self.so.options = {"one": one_spec, "two": two_spec}
-        self.assertEqual(self.so.normalise(self.meta, {"one": 1, "two": 2, "three": 3}), {"one": one_spec_result, "two": two_spec_result, "three": 3})
+        self.assertEqual(self.so.normalise(self.meta, {"one": 1, "two": 2}), {"one": one_spec_result, "two": two_spec_result})
 
     it "collects errors":
         one_spec_error = BadSpecValue("Bad one")
@@ -401,10 +412,10 @@ describe TestCase, "defaulted":
         spec = mock.Mock(name="spec")
         dfltd = sb.defaulted(spec, dflt)
         self.assertEqual(dfltd.spec, spec)
-        self.assertEqual(dfltd.default, dflt)
+        self.assertEqual(dfltd.default(self.meta), dflt)
 
     it "defaults to the dflt":
-        self.assertIs(self.dfltd.default, self.dflt)
+        self.assertIs(self.dfltd.default(self.meta), self.dflt)
         self.assertIs(self.dfltd.normalise(self.meta, NotSpecified), self.dflt)
 
     it "proxies the spec if a value is provided":
@@ -495,6 +506,20 @@ describe TestCase, "filename_spec":
         with self.a_temp_file() as filename:
             self.assertEqual(sb.filename_spec().normalise(self.meta, filename), filename)
 
+describe TestCase, "file_spec":
+    before_each:
+        self.meta = mock.Mock(name="meta", spec_set=Meta)
+
+    it "complains if the object is not a file":
+        for opt in ("", "asdf", 0, 1, True, False, {}, {1:1}, [], [1], lambda: 1, type("blah", (object, ), {})()):
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Didn't get a file object", meta=self.meta, got=opt):
+                sb.file_spec().normalise(self.meta, opt)
+
+    it "lets through a file object":
+        with self.a_temp_file() as fle:
+            with open(fle) as opened:
+                self.assertIs(sb.file_spec().normalise(self.meta, opened), opened)
+
 describe TestCase, "string_specs":
     __only_run_tests_in_children__ = True
 
@@ -505,7 +530,7 @@ describe TestCase, "string_specs":
         raise NotImplementedError()
 
     it "defaults to an empty string":
-        self.assertEqual(sb.string_spec().default, "")
+        self.assertEqual(sb.string_spec().default(self.meta), "")
 
     it "complains if the value isn't a string":
         for opt in (0, 1, True, False, {}, {1:1}, [], [1], lambda: 1, type("blah", (object, ), {})()):
@@ -562,6 +587,21 @@ describe TestCase, "string_specs":
             reason = mock.Mock(name="reason")
             with self.fuzzyAssertRaisesError(BadSpecValue, reason, available=choices, got="blah", meta=self.meta):
                 self.make_spec(choices, reason=reason).normalise(self.meta, "blah")
+
+describe TestCase, "integer_spec":
+    it "converts string integers into integers":
+        meta = mock.Mock(name="meta")
+        self.assertEqual(sb.integer_spec().normalise(meta, "1333"), 1333)
+
+    it "keeps integers as integers":
+        meta = mock.Mock(name="meta")
+        self.assertEqual(sb.integer_spec().normalise(meta, 1337), 1337)
+
+    it "complains about values that aren't integers":
+        meta = mock.Mock(name="meta")
+        for val, typ in (('', str), ('asdf', str), ({}, dict), ({1:2}, dict), (True, bool), (False, bool), (None, type(None)), ([], list), ((), tuple), ([1], list), ((1, ), tuple)):
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Expected an integer", meta=meta, got=typ):
+                sb.integer_spec().normalise(meta, val)
 
 describe TestCase, "create_spec":
     before_each:
@@ -785,4 +825,99 @@ describe TestCase, "dict_from_bool_spec":
         self.spec.normalise.return_value = result
         self.assertIs(sb.dict_from_bool_spec(lambda: 1, self.spec).normalise(self.meta, val), result)
         self.spec.normalise.assert_called_once_with(self.meta, val)
+
+describe TestCase, "formatted":
+    before_each:
+        self.val = mock.Mock(name="val")
+        self.meta = mock.Mock(name="meta", spec_set=Meta)
+        self.spec = mock.Mock(name="spec")
+
+    it "takes in spec, formatter and expected_type":
+        spec = mock.Mock(name="spec")
+        formatter = mock.Mock(name="formatter")
+        expected_type = mock.Mock(name="expected_type")
+        formatted = sb.formatted(spec, formatter, expected_type)
+        self.assertIs(formatted.spec, spec)
+        self.assertIs(formatted.formatter, formatter)
+        self.assertIs(formatted.expected_type, expected_type)
+
+    it "uses the formatter":
+        meta_path = mock.Mock(name="path")
+        options = mock.Mock(name="options")
+        meta_class = mock.Mock(name="meta_class")
+        meta_class.return_value = options
+
+        self.meta.path = meta_path
+        self.meta.everything = mock.Mock(name="everything", __class__=meta_class)
+
+        key_names = mock.Mock(name="key_names")
+        self.meta.key_names = key_names
+
+        formatter = mock.Mock(name="formatter")
+        formatter_instance = mock.Mock(name="formatter_instance")
+        formatter.return_value = formatter_instance
+
+        formatted = mock.Mock(name="formatted")
+        formatter_instance.format.return_value = formatted
+
+        specd = mock.Mock(name="specd")
+        self.spec.normalise.return_value = specd
+
+        self.assertIs(sb.formatted(self.spec, formatter, expected_type=mock.Mock).normalise(self.meta, self.val), formatted)
+        formatter_instance.format.assert_called_once()
+        formatter.assert_called_once_with(options, meta_path, value=specd)
+
+        meta_class.assert_called_once()
+        self.assertEqual(len(options.update.mock_calls), 2)
+
+        self.spec.normalise.assert_called_once_with(self.meta, self.val)
+
+    it "complains if formatted value has wrong type":
+        formatter = lambda *args, **kwargs: "asdf"
+        spec = sb.any_spec()
+        self.meta.everything = {}
+        self.meta.key_names.return_value = {}
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a different type", expected=mock.Mock, got=str):
+            sb.formatted(spec, formatter, expected_type=mock.Mock).normalise(self.meta, self.val)
+
+    it "works with normal dictionary meta.everything":
+        formatter = lambda *args, **kwargs: "asdf"
+        spec = sb.any_spec()
+        self.meta.everything = {"blah": 1}
+        self.meta.key_names.return_value = {}
+        res = sb.formatted(spec, formatter).normalise(self.meta, self.val)
+        self.assertEqual(res, "asdf")
+
+describe TestCase, "overridden":
+    it "returns the value it's initialised with":
+        meta = mock.Mock(name="meta", spec=[])
+        value = mock.Mock(name="value", spec=[])
+        override = mock.Mock(name="override", spec=[])
+        self.assertIs(sb.overridden(override).normalise(meta, value), override)
+
+describe TestCase, "any_spec":
+    it "returns the value it's given":
+        meta = mock.Mock(name="meta", spec=[])
+        value = mock.Mock(name="value", spec=[])
+        self.assertIs(sb.any_spec().normalise(meta, value), value)
+
+
+describe TestCase, "string_or_int_as_string_spec":
+    it "returns an empty string for the default":
+        meta = mock.Mock(name="meta")
+        self.assertEqual(sb.string_or_int_as_string_spec().normalise(meta, NotSpecified), "")
+
+    it "complains if the value is neither string or integer":
+        meta = mock.Mock(name="meta")
+        for val, typ in (({}, dict), ({1:2}, dict), (True, bool), (False, bool), (None, type(None)), ([], list), ((), tuple), ([1], list), ((1, ), tuple)):
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a string or integer", meta=meta, got=typ):
+                sb.string_or_int_as_string_spec().normalise(meta, val)
+
+    it "returns strings as strings":
+        meta = mock.Mock(name="meta")
+        self.assertEqual(sb.string_or_int_as_string_spec().normalise(meta, "blah"), "blah")
+
+    it "returns integers as strings":
+        meta = mock.Mock(name="meta")
+        self.assertEqual(sb.string_or_int_as_string_spec().normalise(meta, 1), "1")
 

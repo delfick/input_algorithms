@@ -69,7 +69,7 @@ describe TestCase, "Meta":
             self.assertEqual(meta.source, "<unknown>")
 
         it "asks everything for source if it has source_for":
-            path = mock.Mock(name="path")
+            path = [(str(mock.Mock(name="path")), '')]
             source = mock.Mock(name="source")
             source_for = mock.Mock(name="source_for")
             everything = mock.Mock(name="everything")
@@ -77,7 +77,16 @@ describe TestCase, "Meta":
 
             meta = Meta(everything, path)
             self.assertEqual(meta.source, source)
-            everything.source_for.assert_called_once_with(path)
+            everything.source_for.assert_called_once_with(path[0][0])
+
+        it "catches KeyError from finding the source":
+            path = [(str(mock.Mock(name="path")), '')]
+            everything = mock.Mock(name="everything")
+            everything.source_for.side_effect = KeyError("path")
+
+            meta = Meta(everything, path)
+            self.assertEqual(meta.source, "<unknown>")
+            everything.source_for.assert_called_once_with(path[0][0])
 
     describe "Formatting in a delfick error":
         it "formats with source and path":
@@ -89,4 +98,20 @@ describe TestCase, "Meta":
             everything.source_for.return_value = source
 
             self.assertEqual(meta.delfick_error_format("blah"), "{{source={0}, path=one.three.five[1]}}".format(source))
+
+        it "doesn't print out source if there is no source":
+            path = mock.Mock(name="path")
+            everything = mock.Mock(name="everything")
+
+            meta = Meta(everything, [("one", ""), ("three", ""), ("five", ""), ("", [1])])
+            source = []
+            everything.source_for.return_value = source
+
+            self.assertEqual(meta.delfick_error_format("blah"), "{{path=one.three.five[1]}}".format(source))
+
+    describe "Getting key names":
+        it "returns all the parts of the path as _key_name_i":
+            path = [("one", ""), ("two", "[]"), ("three", "")]
+            meta = Meta(None, path)
+            self.assertEqual(meta.key_names(), {"_key_name_0": "three", "_key_name_1": "two", "_key_name_2": "one"})
 

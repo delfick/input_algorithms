@@ -7,6 +7,21 @@ import os
 class NotSpecified(object):
     """Tell the difference between None and not specified"""
 
+def apply_validators(meta, val, validators, chain_value=True):
+    errors = []
+    for validator in validators:
+        try:
+            nxt = validator.normalise(meta, val)
+            if chain_value:
+                val = nxt
+        except BadSpecValue as e:
+            errors.append(e)
+
+    if errors:
+        raise BadSpecValue("Failed to validate", meta=meta, _errors=errors)
+
+    return val
+
 class Spec(object):
     def __init__(self, *pargs, **kwargs):
         self.pargs = pargs
@@ -25,7 +40,7 @@ class Spec(object):
             if hasattr(self, "normalise_empty"):
                 return self.normalise_empty(meta)
             elif hasattr(self, "default"):
-                return self.default
+                return self.default(meta)
             else:
                 return val
         elif hasattr(self, "normalise_filled"):
@@ -45,8 +60,7 @@ class always_same_spec(Spec):
         return self.result
 
 class dictionary_spec(Spec):
-    @property
-    def default(self):
+    def default(self, meta):
         return {}
 
     def normalise_filled(self, meta, val):
@@ -90,8 +104,7 @@ class listof(Spec):
         self.spec = spec
         self.expect = expect
 
-    @property
-    def default(self):
+    def default(self, meta):
         return []
 
     def normalise_filled(self, meta, val):
@@ -127,8 +140,7 @@ class set_options(Spec):
     def setup(self, **options):
         self.options = options
 
-    @property
-    def default(self):
+    def default(self, meta):
         return {}
 
     def normalise_filled(self, meta, val):
@@ -136,17 +148,16 @@ class set_options(Spec):
         if not isinstance(val, dict):
             raise BadSpecValue("Expected a dictionary", meta=meta, got=type(val))
 
-        result = val
+        result = {}
         errors = []
 
         for key, spec in self.options.items():
-            val = result.get(key, NotSpecified)
+            nxt = val.get(key, NotSpecified)
 
             try:
-                normalised = spec.normalise(meta.at(key), val)
-                if normalised is not val:
-                    result[key] = spec.normalise(meta.at(key), val)
-            except BadSpec as error:
+                normalised = spec.normalise(meta.at(key), nxt)
+                result[key] = normalised
+            except (BadSpec, BadSpecValue) as error:
                 errors.append(error)
 
         if errors:
@@ -157,7 +168,7 @@ class set_options(Spec):
 class defaulted(Spec):
     def setup(self, spec, dflt):
         self.spec = spec
-        self.default = dflt
+        self.default = lambda s: dflt
 
     def normalise_filled(self, meta, val):
         """Proxy our spec"""
@@ -184,8 +195,14 @@ class boolean(Spec):
             return val
 
 class directory_spec(Spec):
-    def normalise_filled(self, meta, val):
+    def setup(self, spec=NotSpecified):
+        self.spec = spec
+
+    def normalise_either(self, meta, val):
         """Complain if not a meta to a directory"""
+        if self.spec is not NotSpecified:
+            val = self.spec.normalise(meta, val)
+
         if not isinstance(val, six.string_types):
             raise BadDirectory("Didn't even get a string", meta=meta, got=type(val))
         elif not os.path.exists(val):
@@ -207,9 +224,24 @@ class filename_spec(Spec):
         else:
             return val
 
+class file_spec(Spec):
+    def normalise_filled(self, meta, val):
+        """Complain if not a file object"""
+        bad = False
+        if six.PY2:
+            if not isinstance(val, file):
+                bad = True
+        else:
+            import io
+            if not isinstance(val, io.TextIOBase):
+                bad = True
+
+        if bad:
+            raise BadSpecValue("Didn't get a file object", meta=meta, got=val)
+        return val
+
 class string_spec(Spec):
-    @property
-    def default(self):
+    def default(self, meta):
         return ""
 
     def normalise_filled(self, meta, val):
@@ -219,6 +251,23 @@ class string_spec(Spec):
 
         return val
 
+class integer_spec(Spec):
+    def normalise_filled(self, meta, val):
+        """Make sure it's an integer and convert into one if it's a string"""
+        if not isinstance(val, bool) and (isinstance(val, int) or hasattr(val, "isdigit") and val.isdigit()):
+            return int(val)
+        raise BadSpecValue("Expected an integer", meta=meta, got=type(val))
+
+class string_or_int_as_string_spec(Spec):
+    def default(self, meta):
+        return ""
+
+    def normalise_filled(self, meta, val):
+        """Make sure it's a string or integer"""
+        if isinstance(val, bool) or (not isinstance(val, six.string_types) and not isinstance(val, six.integer_types)):
+            raise BadSpecValue("Expected a string or integer", meta=meta, got=type(val))
+        return str(val)
+
 class valid_string_spec(string_spec):
     def setup(self, *validators):
         self.validators = validators
@@ -226,11 +275,7 @@ class valid_string_spec(string_spec):
     def normalise_filled(self, meta, val):
         """Make sure if there is a value, that it is valid"""
         val = super(valid_string_spec, self).normalise_filled(meta, val)
-
-        for validator in self.validators:
-            val = validator.normalise(meta, val)
-
-        return val
+        return apply_validators(meta, val, self.validators)
 
 class string_choice_spec(string_spec):
     def setup(self, choices, reason=NotSpecified):
@@ -255,15 +300,20 @@ class create_spec(Spec):
         self.validators = validators
         self.expected_spec = set_options(**expected)
 
+    def default(self, meta):
+        return self.kls(**self.expected_spec.normalise(meta, {}))
+
     def normalise_filled(self, meta, val):
         """If val is already our expected kls, return it, otherwise instantiate it"""
         if isinstance(val, self.kls):
             return val
 
-        for validator in self.validators:
-            validator.normalise(meta, val)
+        apply_validators(meta, val, self.validators, chain_value=False)
         values = self.expected_spec.normalise(meta, val)
-        result = dict((key, values[key]) for key in self.expected)
+        result = getattr(meta, 'base', {})
+        for key in self.expected:
+            result[key] = None
+            result[key] = values.get(key, NotSpecified)
         return self.kls(**result)
 
 class or_spec(Spec):
@@ -329,4 +379,66 @@ class dict_from_bool_spec(Spec):
         if isinstance(val, bool):
             val = self.dict_maker(meta, val)
         return self.spec.normalise(meta, val)
+
+class formatted(Spec):
+    def setup(self, spec, formatter, expected_type=NotSpecified):
+        self.spec = spec
+        self.formatter = formatter
+        self.expected_type = expected_type
+        self.has_expected_type = self.expected_type and self.expected_type is not NotSpecified
+
+    def normalise_either(self, meta, val):
+        """Format the value"""
+        options_opts = {}
+        if hasattr(meta.everything, "converters"):
+            options_opts['converters'] = meta.everything.converters
+        options = meta.everything.__class__(**options_opts)
+        options.update(meta.key_names())
+        options.update(meta.everything)
+
+        specd = self.spec.normalise(meta, val)
+        formatted = self.formatter(options, meta.path, value=specd).format()
+
+        if self.has_expected_type:
+            if not isinstance(formatted, self.expected_type):
+                raise BadSpecValue("Expected a different type", got=type(formatted), expected=self.expected_type)
+
+        return formatted
+
+class many_format(Spec):
+    def setup(self, spec, formatter, expected_type=NotSpecified):
+        self.spec = spec
+        self.formatter = formatter
+        self.expected_type = expected_type
+
+    def normalise_either(self, meta, val):
+        """Format the formatted spec"""
+        val = self.spec.normalise(meta, val)
+        done = []
+
+        while True:
+            fm = formatted(string_spec(), formatter=self.formatter, expected_type=six.string_types)
+            normalised = fm.normalise(meta, val)
+            if normalised == val:
+                break
+
+            if normalised in done:
+                done.append(normalised)
+                raise BadSpecValue("Recursive formatting", done=done, meta=meta)
+            else:
+                done.append(normalised)
+                val = normalised
+
+        return formatted(string_spec(), formatter=self.formatter, expected_type=self.expected_type).normalise(meta, "{{{0}}}".format(val))
+
+class overridden(Spec):
+    def setup(self, value):
+        self.value = value
+
+    def normalise(self, meta, val):
+        return self.value
+
+class any_spec(Spec):
+    def normalise(self, meta, val):
+        return val
 

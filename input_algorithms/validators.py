@@ -51,6 +51,6 @@ class deprecated_key(Validator):
 
     def validate(self, meta, val):
         """Complain if the key is in val"""
-        if self.key in val:
+        if val and self.key in val:
             raise DeprecatedKey(key=self.key, reason=self.reason, meta=meta)
 

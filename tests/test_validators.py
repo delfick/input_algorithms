@@ -149,3 +149,9 @@ describe TestCase, "deprecated_key":
         va.deprecated_key(key, reason).normalise(self.meta, {})
         assert True
 
+    it "doesn't fail if the val is not iterable":
+        key = mock.Mock(name="key")
+        reason = mock.Mock(name="reason")
+        va.deprecated_key(key, reason).normalise(self.meta, None)
+        assert True
+
