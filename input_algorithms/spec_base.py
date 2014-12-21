@@ -392,6 +392,8 @@ class formatted(Spec):
         options_opts = {}
         if hasattr(meta.everything, "converters"):
             options_opts['converters'] = meta.everything.converters
+        if hasattr(meta.everything, "dont_prefix"):
+            options_opts["dont_prefix"] = meta.everything.dont_prefix
         options = meta.everything.__class__(**options_opts)
         options.update(meta.key_names())
         options.update(meta.everything)
