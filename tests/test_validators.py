@@ -155,3 +155,14 @@ describe TestCase, "deprecated_key":
         va.deprecated_key(key, reason).normalise(self.meta, None)
         assert True
 
+describe TestCase, "choice":
+    before_each:
+        self.meta = mock.Mock(name="meta")
+
+    it "complains if the val is not one of the choices":
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Expected the value to be one of the valid choices", got=4, choices=(1, 2, 3), meta=self.meta):
+            va.choice(1, 2, 3).normalise(self.meta, 4)
+
+    it "returns the val if it's one of the choices":
+        self.assertIs(va.choice(1, 2, 3, 4).normalise(self.meta, 4), 4)
+

@@ -54,3 +54,13 @@ class deprecated_key(Validator):
         if val and self.key in val:
             raise DeprecatedKey(key=self.key, reason=self.reason, meta=meta)
 
+class choice(Validator):
+    def setup(self, *choices):
+        self.choices = choices
+
+    def validate(self, meta, val):
+        """Complain if the key is not one of the correct choices"""
+        if val not in self.choices:
+            raise BadSpecValue("Expected the value to be one of the valid choices", got=val, choices=self.choices, meta=meta)
+        return val
+
