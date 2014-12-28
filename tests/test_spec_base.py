@@ -732,6 +732,32 @@ describe TestCase, "or_spec":
         self.spec2.normalise.assert_called_once_with(self.meta, self.val)
         self.spec3.normalise.assert_called_once_with(self.meta, self.val)
 
+describe TestCase, "match_spec":
+    it "uses the spec that matches the type":
+        ret1, ret2, ret3 = mock.Mock(name="ret1"), mock.Mock(name="ret2"), mock.Mock(name="ret3")
+        spec1 = mock.Mock(name="spec1", normalise=mock.Mock(name="normalise1", return_value=ret1))
+        spec2 = mock.Mock(name="spec2", normalise=mock.Mock(name="normalise2", return_value=ret2))
+        spec3 = mock.Mock(name="spec3", normalise=mock.Mock(name="normalise3", return_value=ret3))
+        specs = [(str, spec1), (list, spec2), (dict, spec3)]
+
+        meta = mock.Mock(name="meta")
+        spec = sb.match_spec(*specs)
+
+        self.assertIs(spec.normalise(meta, "asdf"), ret1)
+        self.assertIs(spec.normalise(meta, [1, 2]), ret2)
+        self.assertIs(spec.normalise(meta, "bjlk"), ret1)
+        self.assertIs(spec.normalise(meta, {1:2}), ret3)
+
+    it "complains if it can't find a match":
+        spec1 = mock.Mock(name="spec1")
+        spec2 = mock.Mock(name="spec2")
+        spec3 = mock.Mock(name="spec3")
+        specs = [(str, spec1), (list, spec2), (dict, spec3)]
+
+        meta = mock.Mock(name="meta")
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Value doesn't match any of the options", meta=meta, got=bool, expected=[str, list, dict]):
+            sb.match_spec(*specs).normalise(meta, True)
+
 describe TestCase, "and_spec":
     before_each:
         self.val = mock.Mock(name="val")
@@ -920,4 +946,33 @@ describe TestCase, "string_or_int_as_string_spec":
     it "returns integers as strings":
         meta = mock.Mock(name="meta")
         self.assertEqual(sb.string_or_int_as_string_spec().normalise(meta, 1), "1")
+
+describe TestCase, "container_spec":
+    it "returns an instance of the class with normalised value from the specified spec":
+        meta = mock.Mock(name="meta")
+        normalised = mock.Mock(name="normalised")
+        normalise = mock.Mock(name="normalise", return_value=normalised)
+        spec = mock.Mock(name="spec", normalise=normalise)
+        instance = mock.Mock(name="instance")
+        kls = mock.Mock(name="kls", return_value=instance)
+        val = mock.Mock(name="val")
+
+        self.assertIs(sb.container_spec(kls, spec).normalise(meta, val), instance)
+        kls.assert_called_once_with(normalised)
+        normalise.assert_called_once_with(meta, val)
+
+describe TestCase, "delayed":
+    it "returns a function that will do the normalisation":
+        called = []
+        normalise = mock.Mock(name="normalise", side_effect=lambda *args: called.append(1))
+        spec = mock.Mock(name="spec", normalise=normalise)
+
+        meta = mock.Mock(name="meta")
+        val = mock.Mock(name="val")
+        result = sb.delayed(spec).normalise(meta, val)
+        self.assertEqual(called, [])
+
+        result()
+        self.assertEqual(called, [1])
+        normalise.assert_called_once_with(meta, val)
 

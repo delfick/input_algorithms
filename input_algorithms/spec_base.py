@@ -332,6 +332,19 @@ class or_spec(Spec):
         # If made it this far, none of the specs passed :(
         raise BadSpecValue("Value doesn't match any of the options", meta=meta, val=val, _errors=errors)
 
+class match_spec(Spec):
+    def setup(self, *specs):
+        self.specs = specs
+
+    def normalise_filled(self, meta, val):
+        """Try the specs given the type of val"""
+        for expected_typ, spec in self.specs:
+            if isinstance(val, expected_typ):
+                return spec.normalise(meta, val)
+
+        # If made it this far, none of the specs matched
+        raise BadSpecValue("Value doesn't match any of the options", meta=meta, got=type(val), expected=[expected_typ for expected_typ, _ in self.specs])
+
 class and_spec(Spec):
     def setup(self, *specs):
         self.specs = specs
@@ -443,4 +456,19 @@ class overridden(Spec):
 class any_spec(Spec):
     def normalise(self, meta, val):
         return val
+
+class container_spec(Spec):
+    def setup(self, kls, spec):
+        self.kls = kls
+        self.spec = spec
+
+    def normalise_either(self, meta, val):
+        return self.kls(self.spec.normalise(meta, val))
+
+class delayed(Spec):
+    def setup(self, spec):
+        self.spec = spec
+
+    def normalise_either(self, meta, val):
+        return lambda: self.spec.normalise(meta, val)
 
