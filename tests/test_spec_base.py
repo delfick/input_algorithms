@@ -40,6 +40,41 @@ describe TestCase, "Spec":
         spec = Specd(m1, m2, a=m3, b=m4)
         self.assertEqual(called, [spec])
 
+    describe "fake_filled":
+        before_each:
+            self.meta = mock.Mock(name="meta", spec=Meta)
+
+        it "returns self.fake if it exists":
+            res = mock.Mock(name="res")
+            called = []
+            with_non_defaulted_value = mock.Mock(name="with_non_defaulted_value")
+            class Specd(Spec):
+                def fake(specd, meta, with_non_defaulted):
+                    self.assertIs(meta, self.meta)
+                    self.assertIs(with_non_defaulted, with_non_defaulted_value)
+                    called.append(1)
+                    return res
+
+            self.assertIs(Specd().fake_filled(self.meta, with_non_defaulted=with_non_defaulted_value), res)
+            self.assertEqual(called, [1])
+
+        it "returns default if there is no fake defined":
+            res = mock.Mock(name="res")
+            called = []
+            with_non_defaulted_value = mock.Mock(name="with_non_defaulted_value")
+            class Specd(Spec):
+                def default(specd, meta):
+                    self.assertIs(meta, self.meta)
+                    called.append(1)
+                    return res
+
+            self.assertIs(Specd().fake_filled(self.meta, with_non_defaulted=with_non_defaulted_value), res)
+            self.assertEqual(called, [1])
+
+        it "returns NotSpecified if no fake or default specified":
+            with_non_defaulted_value = mock.Mock(name="with_non_defaulted_value")
+            self.assertIs(Spec().fake_filled(self.meta, with_non_defaulted=with_non_defaulted_value), NotSpecified)
+
     describe "normalise":
         describe "When normalise_either is defined":
             it "uses it's value if it returns a non NotSpecified value":
@@ -400,6 +435,42 @@ describe TestCase, "set_options":
         with self.fuzzyAssertRaisesError(BadSpecValue, meta=self.meta, _errors=[one_spec_error, two_spec_error]):
             self.so.normalise(self.meta, {"one": 1, "two": 2, "three": 3})
 
+    describe "fake_filled":
+
+        it "creates a fake from it's options":
+            one_spec_fake = mock.Mock(name="one_spec_fake")
+            one_spec = mock.Mock(name="one_spec", spec_set=["fake_filled"])
+            one_spec.fake_filled.return_value = one_spec_fake
+
+            two_spec_fake = mock.Mock(name="two_spec_fake")
+            two_spec = mock.Mock(name="two_spec", spec_set=["fake_filled"])
+            two_spec.fake_filled.return_value = two_spec_fake
+
+            self.so.options = {"one": one_spec, "two": two_spec}
+            self.assertEqual(self.so.fake_filled(self.meta), {"one": one_spec_fake, "two": two_spec_fake})
+
+        it "ignores NotSpecified fakes":
+            one_spec_fake = mock.Mock(name="one_spec_fake")
+            one_spec = mock.Mock(name="one_spec", spec_set=["fake_filled"])
+            one_spec.fake_filled.return_value = one_spec_fake
+
+            two_spec = mock.Mock(name="two_spec", spec_set=["fake_filled"])
+            two_spec.fake_filled.return_value = NotSpecified
+
+            self.so.options = {"one": one_spec, "two": two_spec}
+            self.assertEqual(self.so.fake_filled(self.meta), {"one": one_spec_fake})
+
+        it "includes NotSpecified fakes if with_non_defaulted":
+            one_spec_fake = mock.Mock(name="one_spec_fake")
+            one_spec = mock.Mock(name="one_spec", spec_set=["fake_filled"])
+            one_spec.fake_filled.return_value = one_spec_fake
+
+            two_spec = mock.Mock(name="two_spec", spec_set=["fake_filled"])
+            two_spec.fake_filled.return_value = NotSpecified
+
+            self.so.options = {"one": one_spec, "two": two_spec}
+            self.assertEqual(self.so.fake_filled(self.meta, with_non_defaulted=True), {"one": one_spec_fake, "two": NotSpecified})
+
 describe TestCase, "defaulted":
     before_each:
         self.meta = mock.Mock(name="meta", spec_set=Meta)
@@ -428,7 +499,7 @@ describe TestCase, "defaulted":
 describe TestCase, "required":
     before_each:
         self.meta = mock.Mock(name="meta", spec_set=Meta)
-        self.spec = mock.Mock(name="spec", spec_set=["normalise"])
+        self.spec = mock.Mock(name="spec", spec_set=["normalise", "fake_filled"])
         self.rqrd = sb.required(self.spec)
 
     it "takes in a spec":
@@ -446,6 +517,11 @@ describe TestCase, "required":
         self.spec.normalise.return_value = result
         self.assertIs(self.rqrd.normalise(self.meta, val), result)
         self.spec.normalise.assert_called_once_with(self.meta, val)
+
+    it "proxies self.spec for fake_filled":
+        res = mock.Mock(name="res")
+        self.spec.fake_filled.return_value = res
+        self.assertIs(self.rqrd.fake_filled(self.meta), res)
 
 describe TestCase, "boolean":
     before_each:
@@ -467,7 +543,7 @@ describe TestCase, "directory_spec":
     it "complains if the value is not a string":
         for opt in (0, 1, True, False, {}, {1:1}, [], [1], lambda: 1, type("blah", (object, ), {})()):
             with self.fuzzyAssertRaisesError(BadDirectory, "Didn't even get a string", meta=self.meta, got=type(opt)):
-                sb.directory_spec().normalise(self.meta, opt)
+                sb.directory_spec(sb.any_spec()).normalise(self.meta, opt)
 
     it "complains if the meta doesn't exist":
         with self.a_temp_dir(removed=True) as directory:
@@ -482,6 +558,12 @@ describe TestCase, "directory_spec":
     it "returns directory as is if is a directory":
         with self.a_temp_dir() as directory:
             self.assertEqual(sb.directory_spec().normalise(self.meta, directory), directory)
+
+    it "proxies self.spec for fake_filled":
+        res = mock.Mock(name="res")
+        spec = mock.Mock(name="spec", spec_set=["fake_filled"])
+        spec.fake_filled.return_value = res
+        self.assertIs(sb.directory_spec(spec).fake_filled(self.meta), res)
 
 describe TestCase, "filename_spec":
     before_each:
@@ -681,6 +763,26 @@ describe TestCase, "create_spec":
         with self.fuzzyAssertRaisesError(BadSpecValue, meta=self.meta, _errors=[spec_error]):
             sb.create_spec(Meh, a=a_spec).normalise(self.meta, {"a": a_val})
 
+    it "proxies self.spec for fake_filled and creates the kls from the result":
+        class Stuff(object):
+            def __init__(self, one, two):
+                self.one = one
+                self.two = two
+
+        one_spec_fake = mock.Mock(name="one_spec_fake")
+        one_spec = mock.Mock(name="one_spec", spec_set=["fake_filled"])
+        one_spec.fake_filled.return_value = one_spec_fake
+
+        two_spec_fake = mock.Mock(name="two_spec_fake")
+        two_spec = mock.Mock(name="two_spec", spec_set=["fake_filled"])
+        two_spec.fake_filled.return_value = two_spec_fake
+
+        spec = sb.create_spec(Stuff, one=one_spec, two=two_spec)
+        stuff = spec.fake_filled(self.meta)
+        assert isinstance(stuff, Stuff)
+        self.assertIs(stuff.one, one_spec_fake)
+        self.assertIs(stuff.two, two_spec_fake)
+
 describe TestCase, "or_spec":
     before_each:
         self.val = mock.Mock(name="val")
@@ -815,6 +917,11 @@ describe TestCase, "optional_spec":
         self.assertIs(sb.optional_spec(self.spec).normalise(self.meta, self.val), result)
         self.spec.normalise.assert_called_once_with(self.meta, self.val)
 
+    it "proxies self.spec for fake_filled":
+        res = mock.Mock(name="res")
+        self.spec.fake_filled.return_value = res
+        self.assertIs(sb.optional_spec(self.spec).fake_filled(self.meta), res)
+
 describe TestCase, "dict_from_bool_spec":
     before_each:
         self.val = mock.Mock(name="val")
@@ -851,6 +958,11 @@ describe TestCase, "dict_from_bool_spec":
         self.spec.normalise.return_value = result
         self.assertIs(sb.dict_from_bool_spec(lambda: 1, self.spec).normalise(self.meta, val), result)
         self.spec.normalise.assert_called_once_with(self.meta, val)
+
+    it "proxies self.spec for fake_filled":
+        res = mock.Mock(name="res")
+        self.spec.fake_filled.return_value = res
+        self.assertIs(sb.dict_from_bool_spec(lambda: 1, self.spec).fake_filled(self.meta), res)
 
 describe TestCase, "formatted":
     before_each:
@@ -914,12 +1026,28 @@ describe TestCase, "formatted":
         res = sb.formatted(spec, formatter).normalise(self.meta, self.val)
         self.assertEqual(res, "asdf")
 
+    describe "fake_filled":
+        it "actually formats the value if with_non_defaulted":
+            res = mock.Mock(name="res")
+            normalise_either = mock.Mock(name="normalise_either", return_value=res)
+            spec = sb.formatted(mock.Mock(name="spec"), mock.Mock(name="formatter"))
+            with mock.patch.object(spec, "normalise_either", normalise_either):
+                self.assertIs(spec.fake_filled(self.meta, with_non_defaulted=True), res)
+
+        it "returns NotSpecified if not with_non_defaulted":
+            self.assertIs(sb.formatted(mock.Mock(name="spec"), mock.Mock(name="formatter")).fake_filled(self.meta, with_non_defaulted=False), NotSpecified)
+
 describe TestCase, "overridden":
     it "returns the value it's initialised with":
         meta = mock.Mock(name="meta", spec=[])
         value = mock.Mock(name="value", spec=[])
         override = mock.Mock(name="override", spec=[])
         self.assertIs(sb.overridden(override).normalise(meta, value), override)
+
+    it "returns the specified value when calling fake_filled":
+        meta = mock.Mock(name="meta", spec=[])
+        override = mock.Mock(name="override", spec=[])
+        self.assertIs(sb.overridden(override).fake_filled(meta), override)
 
 describe TestCase, "any_spec":
     it "returns the value it's given":
@@ -961,6 +1089,20 @@ describe TestCase, "container_spec":
         kls.assert_called_once_with(normalised)
         normalise.assert_called_once_with(meta, val)
 
+    it "returns the kls instantiated with the fake val of the spec on fake_filled":
+        meta = mock.Mock(name="meta")
+        spec = mock.Mock(name="spec")
+        spec_fake = mock.Mock(name="spec_fake")
+        spec.fake_filled.return_value = spec_fake
+
+        class Meh(object):
+            def __init__(self, val):
+                self.val = val
+
+        meh = sb.container_spec(Meh, spec).fake_filled(meta)
+        assert isinstance(meh, Meh)
+        self.assertIs(meh.val, spec_fake)
+
 describe TestCase, "delayed":
     it "returns a function that will do the normalisation":
         called = []
@@ -975,4 +1117,18 @@ describe TestCase, "delayed":
         result()
         self.assertEqual(called, [1])
         normalise.assert_called_once_with(meta, val)
+
+    it "returns a function that returns the fake_filled of the spec":
+        called = []
+        fake_filled = mock.Mock(name="fake_filled", side_effect=lambda *args, **kwargs: called.append(1))
+        spec = mock.Mock(name="spec", fake_filled=fake_filled)
+
+        meta = mock.Mock(name="meta")
+        val = mock.Mock(name="val")
+        result = sb.delayed(spec).fake_filled(meta)
+        self.assertEqual(called, [])
+
+        result()
+        self.assertEqual(called, [1])
+        fake_filled.assert_called_once_with(meta, with_non_defaulted=False)
 

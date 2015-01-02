@@ -48,6 +48,14 @@ class Spec(object):
 
         raise BadSpec("Spec doesn't know how to deal with this value", spec=self, meta=meta, val=val)
 
+    def fake_filled(self, meta, with_non_defaulted=False):
+        """Return this spec as if it was filled with the defaults"""
+        if hasattr(self, "fake"):
+            return self.fake(meta, with_non_defaulted=with_non_defaulted)
+        if hasattr(self, "default"):
+            return self.default(meta)
+        return NotSpecified
+
 class pass_through_spec(Spec):
     def normalise_either(self, meta, val):
         return val
@@ -165,10 +173,19 @@ class set_options(Spec):
 
         return result
 
+    def fake(self, meta, with_non_defaulted=False):
+        """Return a dict with the defaults from the keys that have them"""
+        result = {}
+        for key, spec in self.options.items():
+            fake = spec.fake_filled(meta, with_non_defaulted=with_non_defaulted)
+            if fake is not NotSpecified or with_non_defaulted:
+                result[key] = fake
+        return result
+
 class defaulted(Spec):
     def setup(self, spec, dflt):
         self.spec = spec
-        self.default = lambda s: dflt
+        self.default = lambda m: dflt
 
     def normalise_filled(self, meta, val):
         """Proxy our spec"""
@@ -186,6 +203,9 @@ class required(Spec):
         """Proxy our spec"""
         return self.spec.normalise(meta, val)
 
+    def fake(self, meta, with_non_defaulted=False):
+        return self.spec.fake_filled(meta, with_non_defaulted=with_non_defaulted)
+
 class boolean(Spec):
     def normalise_filled(self, meta, val):
         """Complain if not already a boolean"""
@@ -197,6 +217,11 @@ class boolean(Spec):
 class directory_spec(Spec):
     def setup(self, spec=NotSpecified):
         self.spec = spec
+        if self.spec is NotSpecified:
+            self.spec = string_spec()
+
+    def fake(self, meta, with_non_defaulted=False):
+        return self.spec.fake_filled(meta, with_non_defaulted=with_non_defaulted)
 
     def normalise_either(self, meta, val):
         """Complain if not a meta to a directory"""
@@ -303,6 +328,9 @@ class create_spec(Spec):
     def default(self, meta):
         return self.kls(**self.expected_spec.normalise(meta, {}))
 
+    def fake(self, meta, with_non_defaulted=False):
+        return self.kls(**self.expected_spec.fake_filled(meta, with_non_defaulted=with_non_defaulted))
+
     def normalise_filled(self, meta, val):
         """If val is already our expected kls, return it, otherwise instantiate it"""
         if isinstance(val, self.kls):
@@ -370,6 +398,9 @@ class optional_spec(Spec):
     def setup(self, spec):
         self.spec = spec
 
+    def fake(self, meta, with_non_defaulted=False):
+        return self.spec.fake_filled(meta, with_non_defaulted=with_non_defaulted)
+
     def normalise_empty(self, meta):
         """Just return NotSpecified"""
         return NotSpecified
@@ -387,6 +418,9 @@ class dict_from_bool_spec(Spec):
         """Use an empty dict with the spec if not specified"""
         return self.normalise_filled(meta, {})
 
+    def fake(self, meta, with_non_defaulted=False):
+        return self.spec.fake_filled(meta, with_non_defaulted=with_non_defaulted)
+
     def normalise_filled(self, meta, val):
         """Proxy the spec"""
         if isinstance(val, bool):
@@ -399,6 +433,12 @@ class formatted(Spec):
         self.formatter = formatter
         self.expected_type = expected_type
         self.has_expected_type = self.expected_type and self.expected_type is not NotSpecified
+
+    def fake(self, meta, with_non_defaulted=False):
+        if with_non_defaulted:
+            return self.normalise_either(meta, NotSpecified)
+        else:
+            return NotSpecified
 
     def normalise_either(self, meta, val):
         """Format the value"""
@@ -425,6 +465,9 @@ class many_format(Spec):
         self.spec = spec
         self.formatter = formatter
         self.expected_type = expected_type
+
+    def fake(self, meta, with_non_defaulted=False):
+        return self.spec.fake_filled(meta, with_non_defaulted=with_non_defaulted)
 
     def normalise_either(self, meta, val):
         """Format the formatted spec"""
@@ -453,6 +496,9 @@ class overridden(Spec):
     def normalise(self, meta, val):
         return self.value
 
+    def default(self, meta):
+        return self.value
+
 class any_spec(Spec):
     def normalise(self, meta, val):
         return val
@@ -461,6 +507,9 @@ class container_spec(Spec):
     def setup(self, kls, spec):
         self.kls = kls
         self.spec = spec
+
+    def fake(self, meta, with_non_defaulted=False):
+        return self.kls(self.spec.fake_filled(meta, with_non_defaulted=with_non_defaulted))
 
     def normalise_either(self, meta, val):
         return self.kls(self.spec.normalise(meta, val))
@@ -471,4 +520,7 @@ class delayed(Spec):
 
     def normalise_either(self, meta, val):
         return lambda: self.spec.normalise(meta, val)
+
+    def fake(self, meta, with_non_defaulted=False):
+        return lambda: self.spec.fake_filled(meta, with_non_defaulted=with_non_defaulted)
 
