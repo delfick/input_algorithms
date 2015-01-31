@@ -574,12 +574,16 @@ describe TestCase, "filename_spec":
             with self.fuzzyAssertRaisesError(BadFilename, "Didn't even get a string", meta=self.meta, got=type(opt)):
                 sb.filename_spec().normalise(self.meta, opt)
 
-    it "complains if the meta doesn't exist":
+    it "complains if the value doesn't exist":
         with self.a_temp_file(removed=True) as filename:
             with self.fuzzyAssertRaisesError(BadFilename, "Got something that didn't exist", meta=self.meta, filename=filename):
                 sb.filename_spec().normalise(self.meta, filename)
 
-    it "complains if the meta isn't a file":
+    it "doesn't complain if the value doesn't exist if may_not_exist is True":
+        with self.a_temp_file(removed=True) as filename:
+            self.assertEqual(sb.filename_spec(may_not_exist=True).normalise(self.meta, filename), filename)
+
+    it "complains if the value isn't a file":
         with self.a_temp_dir() as directory:
             with self.fuzzyAssertRaisesError(BadFilename, "Got something that exists but isn't a file", meta=self.meta, filename=directory):
                 sb.filename_spec().normalise(self.meta, directory)

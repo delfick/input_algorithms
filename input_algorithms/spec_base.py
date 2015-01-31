@@ -238,16 +238,24 @@ class directory_spec(Spec):
             return val
 
 class filename_spec(Spec):
+    def setup(self, may_not_exist=False):
+        self.may_not_exist = may_not_exist
+
     def normalise_filled(self, meta, val):
         """Complain if not a meta to a filename"""
         if not isinstance(val, six.string_types):
             raise BadFilename("Didn't even get a string", meta=meta, got=type(val))
-        elif not os.path.exists(val):
+
+        if not os.path.exists(val):
+            if self.may_not_exist:
+                return val
+
             raise BadFilename("Got something that didn't exist", meta=meta, filename=val)
-        elif not os.path.isfile(val):
+
+        if not os.path.isfile(val):
             raise BadFilename("Got something that exists but isn't a file", meta=meta, filename=val)
-        else:
-            return val
+
+        return val
 
 class file_spec(Spec):
     def normalise_filled(self, meta, val):
