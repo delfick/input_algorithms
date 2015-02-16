@@ -9,15 +9,16 @@ class dictobj(dict):
             return namedlist("Defaults", [])
         else:
             fields = []
+            end_fields = []
             for field in self.fields:
                 if isinstance(field, (tuple, list)):
                     name, dflt = field
                     if callable(dflt):
                         dflt = dflt()
-                    fields.append((name, dflt))
+                    end_fields.append((name, dflt))
                 else:
                     fields.append(field)
-            return namedlist("Defaults", fields)
+            return namedlist("Defaults", fields + end_fields)
 
     def __init__(self, *args, **kwargs):
         super(dictobj, self).__init__()
