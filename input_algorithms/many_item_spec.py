@@ -153,7 +153,7 @@ class many_item_formatted_spec(Spec):
         elif isinstance(val, dict):
             if len(val) != 1:
                 raise BadSpecValue("Value as a dict must only be one item", got=val, meta=meta)
-            vals = val.items()[0]
+            vals = list(val.items())[0]
             dividers = [':']
 
         else:
