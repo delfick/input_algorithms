@@ -196,10 +196,10 @@ describe TestCase, "dictionary specs":
 
     describe "dictof":
 
-        def make_spec(self, name_spec=NotSpecified, value_spec=NotSpecified):
+        def make_spec(self, name_spec=NotSpecified, value_spec=NotSpecified, nested=False):
             name_spec = pass_through_spec() if name_spec is NotSpecified else name_spec
             value_spec = pass_through_spec() if value_spec is NotSpecified else value_spec
-            return sb.dictof(name_spec, value_spec)
+            return sb.dictof(name_spec, value_spec, nested=nested)
 
         it "takes in a name_spec and a value_spec":
             name_spec = mock.Mock(name="name_spec")
@@ -207,6 +207,7 @@ describe TestCase, "dictionary specs":
             do = sb.dictof(name_spec, value_spec)
             self.assertEqual(do.name_spec, name_spec)
             self.assertEqual(do.value_spec, value_spec)
+            self.assertEqual(do.nested, False)
 
         it "complains if a key doesn't match the name_spec":
             meta = mock.Mock(name="meta")
@@ -257,6 +258,12 @@ describe TestCase, "dictionary specs":
             spec = self.make_spec(value_spec=value_spec)
             with self.fuzzyAssertRaisesError(BadSpecValue, meta=meta, _errors=[error_two, error_four]):
                 spec.normalise(meta, {"one": 1, "two": 2, "three": 3, "four": 4})
+
+        it "can worked on nested values":
+            meta = mock.Mock(name="meta")
+            val = {"one": {"two": "3"}, "four": "4", "five": 5}
+            spec = self.make_spec(value_spec=sb.integer_spec(), nested=True)
+            self.assertEqual(spec.normalise(meta, val), {"one": {"two": 3}, "four": 4, "five": 5})
 
 describe TestCase, "listof":
     before_each:

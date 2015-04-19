@@ -79,7 +79,8 @@ class dictionary_spec(Spec):
         return val
 
 class dictof(dictionary_spec):
-    def setup(self, name_spec, value_spec):
+    def setup(self, name_spec, value_spec, nested=False):
+        self.nested = nested
         self.name_spec = name_spec
         self.value_spec = value_spec
 
@@ -96,7 +97,10 @@ class dictof(dictionary_spec):
                 errors.append(error)
             else:
                 try:
-                    normalised = self.value_spec.normalise(meta.at(key), value)
+                    if self.nested and isinstance(value, dict):
+                        normalised = self.__class__(self.name_spec, self.value_spec, nested=self.nested).normalise(meta.at(key), value)
+                    else:
+                        normalised = self.value_spec.normalise(meta.at(key), value)
                 except BadSpec as error:
                     errors.append(error)
                 else:
