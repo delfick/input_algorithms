@@ -65,7 +65,7 @@ class dictobj(dict):
         """Return a clone of this object"""
         return self.__class__(**dict((name, self[name]) for name in self.fields))
 
-    def as_dict(self):
+    def as_dict(self, **kwargs):
         """Return as a deeply nested dictionary"""
         result = {}
         for field in self.fields:
@@ -73,7 +73,7 @@ class dictobj(dict):
                 field, _ = field
             val = self[field]
             if hasattr(val, "as_dict"):
-                result[field] = val.as_dict()
+                result[field] = val.as_dict(**kwargs)
             else:
                 result[field] = val
         return result
