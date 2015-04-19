@@ -10,6 +10,16 @@ class Validator(Spec):
         else:
             return self.validate(meta, val)
 
+class has_either(Validator):
+    def setup(self, choices):
+        self.choices = choices
+
+    def validate(self, meta, val):
+        """Complain if we have none of the choices"""
+        if all(val.get(key, NotSpecified) is NotSpecified for key in self.choices):
+            raise BadSpecValue("Need to specify atleast one of the required keys", choices=self.choices, meta=meta)
+        return val
+
 class no_whitespace(Validator):
     def setup(self):
         self.regex = re.compile("\s+")
