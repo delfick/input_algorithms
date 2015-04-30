@@ -56,6 +56,12 @@ class dictobj(dict):
             object.__setattr__(self, key, val)
         self[key] = val
 
+    def __delattr__(self, key):
+        if key in self:
+            del self[key]
+        else:
+            object.__delattr__(self, key)
+
     def __setitem__(self, key, val):
         if hasattr(self.__class__, key):
             object.__setattr__(self, key, val)
