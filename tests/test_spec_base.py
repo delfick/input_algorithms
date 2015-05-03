@@ -696,6 +696,21 @@ describe TestCase, "integer_spec":
             with self.fuzzyAssertRaisesError(BadSpecValue, "Expected an integer", meta=meta, got=typ):
                 sb.integer_spec().normalise(meta, val)
 
+describe TestCase, "float_spec":
+    it "converts string floats into floats":
+        meta = mock.Mock(name="meta")
+        self.assertEqual(sb.float_spec().normalise(meta, "13.33"), 13.33)
+
+    it "keeps floats as floats":
+        meta = mock.Mock(name="meta")
+        self.assertEqual(sb.float_spec().normalise(meta, 13.37), 13.37)
+
+    it "complains about values that aren't floats":
+        meta = mock.Mock(name="meta")
+        for val, typ in (('', str), ('asdf', str), ("0.1.2", str), ({}, dict), ({1:2}, dict), (True, bool), (False, bool), (None, type(None)), ([], list), ((), tuple), ([1], list), ((1, ), tuple)):
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a float", meta=meta, got=typ):
+                sb.float_spec().normalise(meta, val)
+
 describe TestCase, "create_spec":
     before_each:
         self.meta = mock.Mock(name="meta", spec_set=Meta)

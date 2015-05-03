@@ -295,6 +295,17 @@ class integer_spec(Spec):
             return int(val)
         raise BadSpecValue("Expected an integer", meta=meta, got=type(val))
 
+class float_spec(Spec):
+    def normalise_filled(self, meta, val):
+        """Make sure it's a float"""
+        try:
+            if not isinstance(val, bool):
+                return float(val)
+            else:
+                raise BadSpecValue("Expected a float", meta=meta, got=bool)
+        except (TypeError, ValueError) as error:
+            raise BadSpecValue("Expected a float", meta=meta, got=type(val), error=error)
+
 class string_or_int_as_string_spec(Spec):
     def default(self, meta):
         return ""
