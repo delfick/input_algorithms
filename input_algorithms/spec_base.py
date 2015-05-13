@@ -384,14 +384,18 @@ class or_spec(Spec):
         raise BadSpecValue("Value doesn't match any of the options", meta=meta, val=val, _errors=errors)
 
 class match_spec(Spec):
-    def setup(self, *specs):
+    def setup(self, *specs, **kwargs):
         self.specs = specs
+        self.fallback = kwargs.get("fallback")
 
     def normalise_filled(self, meta, val):
         """Try the specs given the type of val"""
         for expected_typ, spec in self.specs:
             if isinstance(val, expected_typ):
                 return spec.normalise(meta, val)
+
+        if self.fallback is not None:
+            return self.fallback.normalise(meta, val)
 
         # If made it this far, none of the specs matched
         raise BadSpecValue("Value doesn't match any of the options", meta=meta, got=type(val), expected=[expected_typ for expected_typ, _ in self.specs])

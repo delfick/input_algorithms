@@ -886,6 +886,12 @@ describe TestCase, "match_spec":
         with self.fuzzyAssertRaisesError(BadSpecValue, "Value doesn't match any of the options", meta=meta, got=bool, expected=[str, list, dict]):
             sb.match_spec(*specs).normalise(meta, True)
 
+    it "allows a fallback":
+        meta = mock.Mock(name="meta")
+        spec = sb.match_spec((bool, sb.overridden("lolz"), ), fallback=sb.any_spec())
+        self.assertEqual(spec.normalise(meta, True), "lolz")
+        self.assertEqual(spec.normalise(meta, "hahah"), "hahah")
+
 describe TestCase, "and_spec":
     before_each:
         self.val = mock.Mock(name="val")
