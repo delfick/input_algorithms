@@ -1,12 +1,15 @@
 from namedlist import namedlist
 
+empty_defaults = namedlist("Defaults", [])
+cached_namedlists = {}
+
 class dictobj(dict):
     fields = None
 
     def make_defaults(self):
         """Make a namedtuple for extracting our wanted keys"""
         if not self.fields:
-            return namedlist("Defaults", [])
+            return empty_defaults
         else:
             fields = []
             end_fields = []
@@ -18,7 +21,12 @@ class dictobj(dict):
                     end_fields.append((name, dflt))
                 else:
                     fields.append(field)
-            return namedlist("Defaults", fields + end_fields)
+
+            joined = fields + end_fields
+            identifier = str(joined)
+            if identifier not in cached_namedlists:
+                cached_namedlists[identifier] = namedlist("Defaults", joined)
+            return cached_namedlists[identifier]
 
     def __init__(self, *args, **kwargs):
         super(dictobj, self).__init__()

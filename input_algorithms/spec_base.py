@@ -7,6 +7,9 @@ import os
 class NotSpecified(object):
     """Tell the difference between None and not specified"""
 
+    def __repr__(self):
+        return "<NotSpecified>"
+
 def apply_validators(meta, val, validators, chain_value=True):
     errors = []
     for validator in validators:
