@@ -1,7 +1,8 @@
 Input Algorithms
 ================
 
-Thin DSL for creating yaml specifications.
+A DSL to assist with writing specifications describing valid data and testing
+that inputted data meets those defined specifications.
 
 .. image:: https://travis-ci.org/delfick/nose-focus.png?branch=master
     :target: https://travis-ci.org/delfick/input_algorithms
