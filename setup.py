@@ -9,6 +9,7 @@ setup(
 
      , install_requires =
        [ 'delfick_error>=1.6'
+       , "namedlist"
        ]
 
     , extras_require =
@@ -16,7 +17,6 @@ setup(
         [ "nose"
         , "mock"
         , "noseOfYeti"
-        , "namedlist"
         ]
       }
 
