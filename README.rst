@@ -28,6 +28,52 @@ Or if you're developing it:
     pip install -e .
     pip install -e ".[tests]"
 
+USAGE
+-------
+
+Here is an example to help you use the library.
+
+.. code-block:: python
+
+    from input_algorithms.dictobj import dictobj
+    from input_algorithms.validators import Validator
+    from input_algorithms import spec_base
+    from input_algorithms.meta import Meta
+    import re
+
+    meta = Meta({},[])
+
+    # 1. Create a class defining your fields.
+    class PersonDictObj(dictobj):
+        fields = ["name", "age"]
+
+    # 2. Create custom validate methods as required.
+    class ValidName(Validator):
+        def validate(self, meta, val):
+            matcher = re.compile("^[A-Za-z\ ]+$")
+            if not matcher.match(val):
+                raise Exception("{0} doesn't look like a name.".format(val))
+            return val
+
+    class ValidAge(Validator):
+        def validate(self, meta, val):
+            if val > 120:
+                raise Exception("I don't believe you are that old")
+            return val
+
+    # 3. Tie together the pieces.
+    person_spec = spec_base.create_spec(
+        PersonDictObj,
+        name = spec_base.required(spec_base.valid_string_spec(ValidName())),
+        age = spec_base.and_spec(spec_base.integer_spec(), ValidAge()),
+    )
+
+    # 4. feed some data into your dictobj.
+    data = {"name": "Ralph", "age": 23}
+
+    print("Name is {0}".format(person_spec.normalise(meta, data).name))
+    print("Age is {0}".format(person_spec.normalise(meta, data).age))
+
 Tests
 -----
 
