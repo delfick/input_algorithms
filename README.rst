@@ -10,7 +10,8 @@ Why the name?
 =============
 
 I got the inspiration from the movie Transcendence when a character says
-something to the effect of "We could do this if we had better input algorithms".
+something to the effect of "We could do this if we had better input
+algorithms".
 
 Installation
 ------------
