@@ -76,7 +76,7 @@ class dictionary_spec(Spec):
 
     def normalise_filled(self, meta, val):
         """Make sure it's a dictionary"""
-        if not isinstance(val, dict):
+        if not isinstance(val, dict) and not getattr(val, "is_dict", False):
             raise BadSpecValue("Expected a dictionary", meta=meta, got=type(val))
 
         return val
@@ -100,7 +100,7 @@ class dictof(dictionary_spec):
                 errors.append(error)
             else:
                 try:
-                    if self.nested and isinstance(value, dict):
+                    if self.nested and (isinstance(value, dict) or getattr(value, "is_dict", False)):
                         normalised = self.__class__(self.name_spec, self.value_spec, nested=self.nested).normalise(meta.at(key), value)
                     else:
                         normalised = self.value_spec.normalise(meta.at(key), value)
@@ -160,7 +160,7 @@ class set_options(Spec):
 
     def normalise_filled(self, meta, val):
         """Fill out a dictionary with what we want as well as the remaining extra"""
-        if not isinstance(val, dict):
+        if not isinstance(val, dict) and not getattr(val, "is_dict", False):
             raise BadSpecValue("Expected a dictionary", meta=meta, got=type(val))
 
         result = {}
