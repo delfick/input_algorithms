@@ -1034,10 +1034,10 @@ describe TestCase, "formatted":
         self.spec.normalise.return_value = specd
 
         self.assertIs(sb.formatted(self.spec, formatter, expected_type=mock.Mock).normalise(self.meta, self.val), formatted)
-        formatter_instance.format.assert_called_once()
+        formatter_instance.format.assert_called_once_with()
         formatter.assert_called_once_with(options, meta_path, value=specd)
 
-        meta_class.assert_called_once()
+        meta_class.assert_called_once_with(converters=self.meta.everything.converters, dont_prefix=self.meta.everything.dont_prefix)
         self.assertEqual(len(options.update.mock_calls), 2)
 
         self.spec.normalise.assert_called_once_with(self.meta, self.val)
