@@ -5,6 +5,7 @@ cached_namedlists = {}
 
 class dictobj(dict):
     fields = None
+    is_dict = True
 
     def make_defaults(self):
         """Make a namedtuple for extracting our wanted keys"""
@@ -31,7 +32,6 @@ class dictobj(dict):
     def __init__(self, *args, **kwargs):
         super(dictobj, self).__init__()
         self.setup(*args, **kwargs)
-        self.is_dict = True
 
     def __nonzero__(self):
         return False
