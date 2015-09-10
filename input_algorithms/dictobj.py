@@ -34,7 +34,7 @@ class dictobj(dict):
         self.setup(*args, **kwargs)
 
     def __nonzero__(self):
-        return False
+        return True
 
     def setup(self, *args, **kwargs):
         defaults = self.make_defaults()(*args, **kwargs)
