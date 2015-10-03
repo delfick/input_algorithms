@@ -696,6 +696,32 @@ describe TestCase, "integer_spec":
             with self.fuzzyAssertRaisesError(BadSpecValue, "Expected an integer", meta=meta, got=typ):
                 sb.integer_spec().normalise(meta, val)
 
+describe TestCase, "integer_choice_spec":
+    def make_spec(self, choices=NotSpecified, reason=NotSpecified):
+        choices = [1, 2, 3] if choices is NotSpecified else choices
+        return sb.integer_choice_spec(choices, reason=reason)
+
+    it "takes in a list of choices and a reason":
+        choice1 = mock.Mock(name="choice1")
+        choice2 = mock.Mock(name="choice2")
+        reason = mock.Mock(name="reason")
+        spec = self.make_spec([choice1, choice2], reason=reason)
+        self.assertEqual(spec.choices, [choice1, choice2])
+        self.assertEqual(spec.reason, reason)
+
+    it "defaults reason":
+        self.assertEqual(self.make_spec([]).reason, "Expected one of the available choices")
+
+    it "complains if the value isn't one of the choices":
+        choices = [1, 2, 3]
+        meta = mock.Mock(name="meta")
+        reason = mock.Mock(name="reason")
+        with self.fuzzyAssertRaisesError(BadSpecValue, reason, available=choices, got=4):
+            self.make_spec(choices, reason=reason).normalise(meta, 4)
+
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Expected an integer", got=str):
+            self.make_spec(choices, reason=reason).normalise(meta, "blah")
+
 describe TestCase, "float_spec":
     it "converts string floats into floats":
         meta = mock.Mock(name="meta")

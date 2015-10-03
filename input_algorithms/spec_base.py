@@ -328,6 +328,22 @@ class valid_string_spec(string_spec):
         val = super(valid_string_spec, self).normalise_filled(meta, val)
         return apply_validators(meta, val, self.validators)
 
+class integer_choice_spec(integer_spec):
+    def setup(self, choices, reason=NotSpecified):
+        self.choices = choices
+        self.reason = reason
+        if self.reason is NotSpecified:
+            self.reason = "Expected one of the available choices"
+
+    def normalise_filled(self, meta, val):
+        """Complain if val isn't one of the available"""
+        val = super(integer_choice_spec, self).normalise_filled(meta, val)
+
+        if val not in self.choices:
+            raise BadSpecValue(self.reason, available=self.choices, got=val, meta=meta)
+
+        return val
+
 class string_choice_spec(string_spec):
     def setup(self, choices, reason=NotSpecified):
         self.choices = choices
