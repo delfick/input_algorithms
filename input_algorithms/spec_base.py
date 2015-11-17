@@ -414,7 +414,10 @@ class match_spec(Spec):
                 return spec.normalise(meta, val)
 
         if self.fallback is not None:
-            return self.fallback.normalise(meta, val)
+            fallback = self.fallback
+            if callable(self.fallback):
+                fallback = self.fallback()
+            return fallback.normalise(meta, val)
 
         # If made it this far, none of the specs matched
         raise BadSpecValue("Value doesn't match any of the options", meta=meta, got=type(val), expected=[expected_typ for expected_typ, _ in self.specs])

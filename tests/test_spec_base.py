@@ -918,6 +918,12 @@ describe TestCase, "match_spec":
         self.assertEqual(spec.normalise(meta, True), "lolz")
         self.assertEqual(spec.normalise(meta, "hahah"), "hahah")
 
+    it "allows fallback to be callable":
+        meta = mock.Mock(name="meta")
+        spec = sb.match_spec((bool, sb.overridden("lolz"), ), fallback=lambda: sb.any_spec())
+        self.assertEqual(spec.normalise(meta, True), "lolz")
+        self.assertEqual(spec.normalise(meta, "hahah"), "hahah")
+
 describe TestCase, "and_spec":
     before_each:
         self.val = mock.Mock(name="val")
