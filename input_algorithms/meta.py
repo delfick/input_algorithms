@@ -3,15 +3,13 @@ import six
 class Meta(object):
     """Holds information about some value"""
     everything = None
-    format_options = None
 
-    def __init__(self, everything, path, format_options=None):
+    def __init__(self, everything, path):
         self._path = path
         if isinstance(self._path, six.string_types):
             self._path = [(self._path, "")]
 
         self.everything = everything
-        self.format_options = format_options
 
     def indexed_at(self, index):
         return self.new_path([("", "[{0}]".format(index))])
