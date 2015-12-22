@@ -889,9 +889,9 @@ describe TestCase, "or_spec":
 describe TestCase, "match_spec":
     it "uses the spec that matches the type":
         ret1, ret2, ret3 = mock.Mock(name="ret1"), mock.Mock(name="ret2"), mock.Mock(name="ret3")
-        spec1 = mock.Mock(name="spec1", normalise=mock.Mock(name="normalise1", return_value=ret1))
-        spec2 = mock.Mock(name="spec2", normalise=mock.Mock(name="normalise2", return_value=ret2))
-        spec3 = mock.Mock(name="spec3", normalise=mock.Mock(name="normalise3", return_value=ret3))
+        spec1 = mock.NonCallableMock(name="spec1", normalise=mock.Mock(name="normalise1", return_value=ret1))
+        spec2 = mock.NonCallableMock(name="spec2", normalise=mock.Mock(name="normalise2", return_value=ret2))
+        spec3 = lambda: mock.Mock(name="spec3", normalise=mock.Mock(name="normalise3", return_value=ret3))
         specs = [(str, spec1), (list, spec2), (dict, spec3)]
 
         meta = mock.Mock(name="meta")

@@ -411,6 +411,8 @@ class match_spec(Spec):
         """Try the specs given the type of val"""
         for expected_typ, spec in self.specs:
             if isinstance(val, expected_typ):
+                if callable(spec):
+                    spec = spec()
                 return spec.normalise(meta, val)
 
         if self.fallback is not None:
