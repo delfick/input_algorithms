@@ -1,4 +1,7 @@
+from input_algorithms.field_spec import Field, FieldSpecMetakls
+
 from namedlist import namedlist
+import six
 
 empty_defaults = namedlist("Defaults", [])
 cached_namedlists = {}
@@ -6,6 +9,8 @@ cached_namedlists = {}
 class dictobj(dict):
     fields = None
     is_dict = True
+
+    Field = Field
 
     def make_defaults(self):
         """Make a namedtuple for extracting our wanted keys"""
@@ -96,3 +101,4 @@ class dictobj(dict):
                 result[field] = val
         return result
 
+dictobj.Spec = six.with_metaclass(FieldSpecMetakls, dictobj)
