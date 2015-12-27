@@ -25,6 +25,9 @@ class Meta(object):
         """Return {_key_name_<i>: <i'th part of part} for each part in the path reversed"""
         return dict(("_key_name_{0}".format(index), val) for index, (val, _) in enumerate(reversed(self._path)))
 
+    def __eq__(self, other):
+        return self.everything == other.everything and self.path == other.path
+
     @property
     def path(self):
         """Return the path as a string"""

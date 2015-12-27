@@ -14,6 +14,13 @@ describe TestCase, "Meta":
         self.assertIs(meta._path, path)
         self.assertIs(meta.everything, everything)
 
+    it "is equal to another meta with the same everything and path":
+        assert Meta({}, [("hello", "")]) == Meta({}, []).at("hello")
+        assert not Meta({}, [("hello", "[0]")]) == Meta({}, []).at("hello")
+
+    it "is not equal to another meta with a different path":
+        assert not Meta({}, [("hello", "")]) == Meta({}, []).at("there")
+
     describe "New path":
         before_each:
             self.p1 = mock.Mock(name="p1")
