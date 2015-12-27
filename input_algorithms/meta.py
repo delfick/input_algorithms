@@ -28,6 +28,19 @@ class Meta(object):
     def __eq__(self, other):
         return self.everything == other.everything and self.path == other.path
 
+    def __lt__(self, other):
+        everything = self.everything
+        if type(everything) is dict:
+            everything = str(everything)
+
+        other_everything = other.everything
+        if type(other_everything) is dict:
+            other_everything = str(other_everything)
+        return everything < other_everything and self.path < other.path
+
+    def __gt__(self, other):
+        return self != other and not self < other
+
     @property
     def path(self):
         """Return the path as a string"""
