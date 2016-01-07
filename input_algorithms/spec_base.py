@@ -563,6 +563,8 @@ class container_spec(Spec):
         return self.kls(self.spec.fake_filled(meta, with_non_defaulted=with_non_defaulted))
 
     def normalise_either(self, meta, val):
+        if isinstance(val, self.kls):
+            return val
         return self.kls(self.spec.normalise(meta, val))
 
 class delayed(Spec):
