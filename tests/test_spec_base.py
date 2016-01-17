@@ -1145,13 +1145,15 @@ describe TestCase, "container_spec":
         normalised = mock.Mock(name="normalised")
         normalise = mock.Mock(name="normalise", return_value=normalised)
         spec = mock.Mock(name="spec", normalise=normalise)
-        instance = mock.Mock(name="instance")
-        kls = mock.Mock(name="kls", return_value=instance)
+        alright = mock.Mock(name="alright")
+        class kls(object):
+            def __init__(self, contents):
+                if contents is not alright:
+                    assert False, "Shouldn't have instantiated a new kls: Got {0}".format(contents)
         val = mock.Mock(name="val")
 
-        self.assertIs(sb.container_spec(kls, spec).normalise(meta, val), instance)
-        kls.assert_called_once_with(normalised)
-        normalise.assert_called_once_with(meta, val)
+        self.assertIs(type(sb.container_spec(kls, spec).normalise(meta, kls(alright))), kls)
+        self.assertIs(len(normalise.mock_calls), 0)
 
     it "returns the kls instantiated with the fake val of the spec on fake_filled":
         meta = mock.Mock(name="meta")
