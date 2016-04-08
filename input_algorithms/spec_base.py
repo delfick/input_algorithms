@@ -295,7 +295,10 @@ class integer_spec(Spec):
     def normalise_filled(self, meta, val):
         """Make sure it's an integer and convert into one if it's a string"""
         if not isinstance(val, bool) and (isinstance(val, int) or hasattr(val, "isdigit") and val.isdigit()):
-            return int(val)
+            try:
+                return int(val)
+            except (TypeError, ValueError) as error:
+                raise BadSpecValue("Couldn't transform value into an integer", meta=meta, error=str(error))
         raise BadSpecValue("Expected an integer", meta=meta, got=type(val))
 
 class float_spec(Spec):
