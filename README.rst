@@ -37,9 +37,9 @@ Here is an example to help you use the library.
 
 .. code-block:: python
 
-    from input_algorithms.dictobj import dictobj
     from input_algorithms.validators import Validator
-    from input_algorithms import spec_base
+    from input_algorithms.dictobj import dictobj
+    from input_algorithms import spec_base as sb
     from input_algorithms.meta import Meta
     import re
 
@@ -64,17 +64,21 @@ Here is an example to help you use the library.
             return val
 
     # 3. Tie together the pieces.
-    person_spec = spec_base.create_spec(
+    person_spec = sb.create_spec(
         PersonDictObj,
-        name = spec_base.required(spec_base.valid_string_spec(ValidName())),
-        age = spec_base.and_spec(spec_base.integer_spec(), ValidAge()),
+        name = sb.required(sb.valid_string_spec(ValidName())),
+        age = sb.and_spec(sb.integer_spec(), ValidAge()),
     )
 
-    # 4. feed some data into your dictobj.
+    # 4. Have some data
     data = {"name": "Ralph", "age": 23}
 
-    print("Name is {0}".format(person_spec.normalise(meta, data).name))
-    print("Age is {0}".format(person_spec.normalise(meta, data).age))
+    # 5. Normalise the data into your object
+    normalised = person_spec.normalise(meta, data)
+
+    # 6. Use the object!
+    print("Name is {0}".format(normalised.name))
+    print("Age is {0}".format(normalised.age))
 
 Tests
 -----
