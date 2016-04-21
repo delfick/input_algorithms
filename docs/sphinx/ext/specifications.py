@@ -11,7 +11,7 @@ class ShowSpecsDirective(Directive):
     def run(self):
         section = nodes.section()
         section['ids'].append("default-specs")
-        for name, spec in default_specs.items():
+        for name, spec in default_specs:
 
             title = nodes.title()
             title += nodes.Text(name)

@@ -7,16 +7,15 @@ and transform data.
 """
 from input_algorithms.errors import BadSpec, BadSpecValue, BadDirectory, BadFilename
 
-from collections import OrderedDict
 import operator
 import six
 import os
 
-default_specs = OrderedDict()
+default_specs = []
 
 def spec(func):
     """For the documentationz!"""
-    default_specs[func.__name__] = func
+    default_specs.append((func.__name__, func))
     return func
 
 class NotSpecified(object):
