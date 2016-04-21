@@ -9,13 +9,14 @@ import six
 class ShowSpecsDirective(Directive):
     """Directive for outputting all the specs found in input_algorithms.spec_base.default_specs"""
     def run(self):
-        section = nodes.section()
-        section['ids'].append("default-specs")
+        sections = []
         for name, spec in default_specs:
+            sect = nodes.section()
+            sect['ids'].append(name)
 
             title = nodes.title()
             title += nodes.Text(name)
-            section += title
+            sect += title
 
             viewlist = ViewList()
             for line in dedent(spec.__doc__).split("\n"):
@@ -23,8 +24,10 @@ class ShowSpecsDirective(Directive):
                     viewlist.append("    {0}".format(line), name)
                 else:
                     viewlist.append("", name)
-            self.state.nested_parse(viewlist, self.content_offset, section)
-        return [section]
+            self.state.nested_parse(viewlist, self.content_offset, sect)
+            sections.append(sect)
+
+        return sections
 
 def setup(app):
     """Setup the show_specs directive"""
