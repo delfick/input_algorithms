@@ -8,6 +8,60 @@ import six
 
 class many_item_formatted_spec(Spec):
     """
+    Usage
+        .. code-block:: python
+
+            class FinalKls(dictobj):
+                fields = ["one", "two", ("three", None)]
+
+            class my_special_spec(many_item_formatted_spec):
+                specs = [integer_spec(), string_spec()]
+
+                def create_result(self, one, two, three, meta, val, dividers):
+                    if three is NotSpecified:
+                        return FinalKls(one, two)
+                    else:
+                        return FinalKls(one, two, three)
+
+                # The rest of the options are optional
+                creates = FinalKls
+                value_name = "special"
+                seperators = "^"
+                optional_specs = [boolean()]
+
+            spec = my_special_spec()
+            spec.normalise(meta, "1^tree") == FinalKls(1, "tree")
+            spec.normalise(meta, [1, "tree"]) == FinalKls(1, "tree")
+            spec.normalise(meta, [1, tree, False]) == FinalKls(1, "tree", False)
+
+        We can also define modification hooks for each part of the spec:
+
+        .. code-block:: python
+
+            class my_special_spec(many_item_formatted_spec):
+                specs = [integer_spec(), integer_spec(), integer_spec()]
+
+                def spec_wrapper_2(self, spec, one, two, meta, val, dividers):
+                    return defaulted(spec, one + two)
+
+                def determine_2(self, meta, val):
+                    return 42
+
+                def alter_2(self, one, meta, original_two, val):
+                    if one < 10:
+                        return original_two
+                    else:
+                        return original_two * 10
+
+                def alter_3(self, one, two, meta, original_three, val):
+                    if two < 100:
+                        return original_three
+                    else:
+                        return original_three * 100
+
+                def create_result(self, one, two, three, meta, val, dividers):
+                    return FinalKls(one, two, three)
+
     A spec for something that is many items
     Either a list or a string split by ":"
 

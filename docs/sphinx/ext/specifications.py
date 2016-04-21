@@ -1,3 +1,4 @@
+from input_algorithms.many_item_spec import many_item_formatted_spec
 from input_algorithms.spec_base import default_specs
 
 from docutils.statemachine import ViewList
@@ -5,6 +6,8 @@ from sphinx.util.compat import Directive
 from textwrap import dedent
 from docutils import nodes
 import six
+
+default_specs.append((many_item_formatted_spec.__name__, many_item_formatted_spec))
 
 class ShowSpecsDirective(Directive):
     """Directive for outputting all the specs found in input_algorithms.spec_base.default_specs"""
