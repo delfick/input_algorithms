@@ -1,3 +1,10 @@
+"""
+spec_base is the core of input_algorithms and implements many specification
+classes based off the ``Spec`` class.
+
+A specification is an object with a ``normalise`` method and is used to validate
+and transform data.
+"""
 from input_algorithms.errors import BadSpec, BadSpecValue, BadDirectory, BadFilename
 
 import operator
@@ -10,7 +17,27 @@ class NotSpecified(object):
     def __repr__(self):
         return "<NotSpecified>"
 
+    def __unicode__(self):
+        return "<NotSpecified>"
+
+    def __str__(self):
+        return "<NotSpecified>"
+
 def apply_validators(meta, val, validators, chain_value=True):
+    """
+    Apply a number of validators to a value.
+
+    chain_value
+        Sets whether to pass the validated value into the next
+        validator or whether to use the original value each time
+
+    All validators are tried and errors are collected.
+
+    If any fails, an error is raised, otherwise the value is returned.
+
+    Where value is the original value, or the result of the last validator
+    depending on ``chain_value``.
+    """
     errors = []
     for validator in validators:
         try:
@@ -26,6 +53,75 @@ def apply_validators(meta, val, validators, chain_value=True):
     return val
 
 class Spec(object):
+    """
+    Default shape for a spec (specification, not test!)
+
+    __init__
+        passes all *args and **kwargs to a ``self.setup`` if that exists on the
+        class
+
+    normalise
+        Calls one of the following functions on the class, choosing in this order:
+
+        normalise_either
+            If defined, then this is meant to work with both a specified value as
+            well as ``NotSpecified``.
+
+            If this function returns ``NotSpecified``, then we continue looking
+            for a function to handle this value.
+
+        normalise_empty
+            Called if the value is ``NotSpecified``.
+
+        default
+            Called if the value is ``NotSpecified``.
+
+        return NotSpecified
+            If the value is NotSpecified and the above don't return, then the
+            value is returned as is.
+
+        normalise_filled
+            The value is not ``NotSpecified``
+
+        If none of those options are defined, then an error is raised complaining
+        that we couldn't work out what to do with the value.
+
+        Note that any validation errors should be an subclass of
+        ``input_algorithms.errors.BadSpec``. This is because the default specs
+        only catch such exceptions. Anything else is assumed to be a
+        ProgrammerError and worthy of a traceback.
+
+    fake_filled
+        If ``fake`` is on the class that is used, otherwise if ``default`` is on
+        the class that is used, otherwise we return ``NotSpecified``.
+
+        This is used to generate fake data from a specification.
+
+    The idea is that a Spec is an object with a ``normalise`` method that takes
+    in two objects: ``meta`` and ``val``.
+
+    ``meta``
+        Should be an instance of ``input_algorithms.meta.Meta`` and is used to
+        indicate where we are. This should be passed to any children specifications.
+
+        For example, if we are normalising a dictionary where a child specification
+        is used on a particular value at a key called ``a_key``, we should do
+        something similar to:
+
+        .. code-block:: python
+
+            child_spec().normalise(meta.at("a_key"), val["a_key"])
+
+    ``val``
+        Should be the value we are normalising. The normalising process should
+        validate and transform the value to be what we are specifying.
+
+        For example listof(string_spec()) will transform a single string to be
+        a list of one string.
+
+    When you create a subclass of ``Spec`` you either implement one of the
+    ``normalise_*`` methods or ``normalise`` itself.
+    """
     def __init__(self, *pargs, **kwargs):
         self.pargs = pargs
         self.kwargs = kwargs
@@ -60,10 +156,24 @@ class Spec(object):
         return NotSpecified
 
 class pass_through_spec(Spec):
+    """
+    Usage:
+
+        pass_through_spec().normalise(meta, val)
+
+    Will not touch the value in any way and just return it.
+    """
     def normalise_either(self, meta, val):
         return val
 
 class always_same_spec(Spec):
+    """
+    Usage:
+
+        always_same_spec(result).normalise(meta, val)
+
+    Will ignore value and just return ``result``.
+    """
     def setup(self, result):
         self.result = result
 
@@ -71,6 +181,17 @@ class always_same_spec(Spec):
         return self.result
 
 class dictionary_spec(Spec):
+    """
+    Usage:
+
+        dictionary_spec().normalise(meta, val)
+
+    Will normalise ``NotSpecified`` into ``{}``
+
+    Specified values are valid if
+    ``type(val) is dict`` or ``val.is_dict() is True``. If either those
+    conditions are true, then the dictionary is returned as is.
+    """
     def default(self, meta):
         return {}
 
@@ -82,6 +203,35 @@ class dictionary_spec(Spec):
         return val
 
 class dictof(dictionary_spec):
+    """
+    Usage:
+
+        dictof(name_spec, value_spec).normalise(meta, val)
+
+        # or
+
+        dictof(name_spec, value_spec, nested=True).normalise(meta, val)
+
+    This will first use ``dictionary_spec`` logic on the value to ensure we are
+    normalising a dictionary.
+
+    It will then use ``name_spec`` and ``value_spec`` on the items in the value
+    to produce a resulting dictionary.
+
+    For example if we have ``{"a": 1, "b": 2}``, using dictof is equivalent to:
+
+    .. code-block:: python
+
+        { name_spec.normalise(meta.at("a"), "a"): value_spec.normalise(meta.at("a"), 1)
+        , name_spec.normalise(meta.at("b"), "b"): value_spec.normalise(meta.at("b"), 2)
+        }
+
+    This specification will also do the same to any ``dictionary`` values it has
+    if ``nested`` is set to ``True`` (defaults to ``False``)
+
+    It will also collect any errors and raise a collection of all errors it
+    comes across.
+    """
     def setup(self, name_spec, value_spec, nested=False):
         self.nested = nested
         self.name_spec = name_spec
@@ -115,6 +265,24 @@ class dictof(dictionary_spec):
         return result
 
 class listof(Spec):
+    """
+    Usage:
+
+        listof(spec).normalise(meta, val)
+
+        # or
+
+        listof(spec, expect=typ).normalise(meta, val)
+
+    This specification will transform ``NotSpecified`` into ``[]``
+
+    If we don't have a list, we turn the value into a list of that value.
+
+    If ``expect`` is specified, any item already passing ``isinstance(item, expect)``
+    is left alone, otherwise ``spec`` is used to normalise the value.
+
+    The resulting list of items is returned.
+    """
     def setup(self, spec, expect=NotSpecified):
         self.spec = spec
         self.expect = expect
@@ -152,6 +320,28 @@ class listof(Spec):
         return list(map(operator.itemgetter(1), result))
 
 class set_options(Spec):
+    """
+    Usage:
+
+        set_options(<key1>=<spec1>, ..., <keyn>=<specn>).normalise(meta, val)
+
+        # For example
+
+        set_options(key_1=integer_spec(), key_2=string_spec()).normalise(meta, val)
+
+    This specification transforms ``NotSpecified`` into ``{}``.
+
+    Specified values are validated using ``dictionary_spec`` and then for each
+    keyword argument we use either that key in the ``val`` or ``Notspecified``
+    and normalise it with the ``spec`` for that key.
+
+    Finally, we assemble the result from all these keys in a dictionary and
+    return that.
+
+    Errors are collected and raised in a group.
+
+    Extra keys in ``val`` are ignored.
+    """
     def setup(self, **options):
         self.options = options
 
@@ -160,8 +350,8 @@ class set_options(Spec):
 
     def normalise_filled(self, meta, val):
         """Fill out a dictionary with what we want as well as the remaining extra"""
-        if not isinstance(val, dict) and not getattr(val, "is_dict", False):
-            raise BadSpecValue("Expected a dictionary", meta=meta, got=type(val))
+        # Make sure val is a dictionary!
+        val = dictionary_spec().normalise(meta, val)
 
         result = {}
         errors = []
@@ -190,6 +380,15 @@ class set_options(Spec):
         return result
 
 class defaulted(Spec):
+    """
+    Usage:
+
+        defaulted(spec, dflt).normalise(meta, val)
+
+    This specification will return ``dflt`` if ``val`` is ``NotSpecified``.
+
+    Otherwise, it merely proxies ``spec`` and does ``spec.normalise(meta, val)``
+    """
     def setup(self, spec, dflt):
         self.spec = spec
         self.default = lambda m: dflt
@@ -199,6 +398,15 @@ class defaulted(Spec):
         return self.spec.normalise(meta, val)
 
 class required(Spec):
+    """
+    Usage:
+
+        required(spec).normalise(meta, val)
+
+    This specification will raise an error if ``val`` is ``NotSpecified``.
+
+    Otherwise, it merely proxies ``spec`` and does ``spec.normalise(meta, val)``
+    """
     def setup(self, spec):
         self.spec = spec
 
@@ -214,6 +422,19 @@ class required(Spec):
         return self.spec.fake_filled(meta, with_non_defaulted=with_non_defaulted)
 
 class boolean(Spec):
+    """
+    Usage:
+
+        boolean().normalise(meta, val)
+
+    This complains if the value is not ``isintance(val, bool)``.
+
+    Otherwise it just returns the ``val``.
+
+    .. note:: This specification does not handle ``NotSpecified``. This is a
+        deliberate decision. Use defaulted(boolean(), <dflt>) if you want to
+        handle that.
+    """
     def normalise_filled(self, meta, val):
         """Complain if not already a boolean"""
         if not isinstance(val, bool):
@@ -222,6 +443,22 @@ class boolean(Spec):
             return val
 
 class directory_spec(Spec):
+    """
+    Usage:
+
+        directory_spec().normalise(meta, val)
+
+        # or
+
+        directory_spec(spec).normalise(meta, val)
+
+    This specification will first normalise ``val`` with ``spec`` if ``spec``
+    is specified.
+
+    It then makes sure that ``val`` is a string, exists, and is a directory.
+
+    If it isn't, an error is raised, otherwise the ``val`` is returned.
+    """
     def setup(self, spec=NotSpecified):
         self.spec = spec
         if self.spec is NotSpecified:
@@ -245,11 +482,30 @@ class directory_spec(Spec):
             return val
 
 class filename_spec(Spec):
-    def setup(self, may_not_exist=False):
+    """
+    Usage:
+
+        directory_spec().normalise(meta, val)
+
+        # or
+
+        filename_spec(spec).normalise(meta, val)
+
+    This specification will first normalise ``val`` with ``spec`` if ``spec``
+    is specified.
+
+    It then makes sure that ``val`` is a string, exists, and is a file.
+
+    If it isn't, an error is raised, otherwise the ``val`` is returned.
+    """
+    def setup(self, spec=NotSpecified, may_not_exist=False):
+        self.spec = spec
         self.may_not_exist = may_not_exist
 
     def normalise_filled(self, meta, val):
-        """Complain if not a meta to a filename"""
+        if self.spec is not NotSpecified:
+            val = self.spec.normalise(meta, val)
+
         if not isinstance(val, six.string_types):
             raise BadFilename("Didn't even get a string", meta=meta, got=type(val))
 
@@ -265,6 +521,14 @@ class filename_spec(Spec):
         return val
 
 class file_spec(Spec):
+    """
+    Usage:
+
+        file_spec().normalise(meta, val)
+
+    This will complain if ``val`` is not a file object, otherwise it just
+    returns ``val``.
+    """
     def normalise_filled(self, meta, val):
         """Complain if not a file object"""
         bad = False
@@ -281,6 +545,16 @@ class file_spec(Spec):
         return val
 
 class string_spec(Spec):
+    """
+    Usage:
+
+        string_spec().normalise(meta, val)
+
+    This transforms ``NotSpecified`` into ``""``
+
+    If ``val`` is specified, it will complain if not ``isinstance(val, six.string_types)``
+    , otherwise it just returns ``val``.
+    """
     def default(self, meta):
         return ""
 
@@ -292,6 +566,20 @@ class string_spec(Spec):
         return val
 
 class integer_spec(Spec):
+    """
+    Usage:
+
+        integer_spec().normalise(meta, val)
+
+    This will complain if ``val`` is not an integer, unless it has ``isdigit``
+    and this function returns ``True``.
+
+    We return ``int(val)`` regardless.
+
+    .. note:: This specification does not handle ``NotSpecified``. This is a
+        deliberate decision. Use defaulted(integer_spec(), <dflt>) if you want
+        to handle that.
+    """
     def normalise_filled(self, meta, val):
         """Make sure it's an integer and convert into one if it's a string"""
         if not isinstance(val, bool) and (isinstance(val, int) or hasattr(val, "isdigit") and val.isdigit()):
@@ -302,6 +590,16 @@ class integer_spec(Spec):
         raise BadSpecValue("Expected an integer", meta=meta, got=type(val))
 
 class float_spec(Spec):
+    """
+    Usage:
+
+        float_spec().normalise(meta, val)
+
+    If the ``val`` is not a ``bool`` then we do ``float(val)`` and return the
+    result.
+
+    Otherwise, or if that fails, an error is raised.
+    """
     def normalise_filled(self, meta, val):
         """Make sure it's a float"""
         try:
@@ -313,6 +611,16 @@ class float_spec(Spec):
             raise BadSpecValue("Expected a float", meta=meta, got=type(val), error=error)
 
 class string_or_int_as_string_spec(Spec):
+    """
+    Usage:
+
+        string_or_int_as_string_spec().normalise(meta, val)
+
+    This transforms ``NotSpecified`` into ``""``
+
+    If the ``val`` is not an integer or string, it will complain, otherwise it
+    returns ``str(val)``.
+    """
     def default(self, meta):
         return ""
 
@@ -323,6 +631,19 @@ class string_or_int_as_string_spec(Spec):
         return str(val)
 
 class valid_string_spec(string_spec):
+    """
+    Usage:
+
+        valid_string_spec(validator1, ..., validatorn).normalise(meta, val)
+
+    This takes in a number of validator specifications and applies them to ``val``
+    after passing through ``valid_string_spec`` logic.
+
+    Validators are just objects with ``normalise`` methods that happen to raise
+    errors and return the ``val`` as is.
+
+    If none of the validators raise an error, the original ``val`` is returned.
+    """
     def setup(self, *validators):
         self.validators = validators
 
@@ -332,6 +653,22 @@ class valid_string_spec(string_spec):
         return apply_validators(meta, val, self.validators)
 
 class integer_choice_spec(integer_spec):
+    """
+    Usage:
+
+        integer_choice_spec([1, 2, 3]).normalise(meta, val)
+
+        # or
+
+        integer_choice_spec([1, 2, 3], reason="Choose one of the first three numbers!").normalise(meta, val)
+
+    This absurdly specific specification will make sure ``val`` is an integer
+    before making sure it's one of the ``choices`` that are provided.
+
+    It defaults to complaining ``Expected one of the available choices`` unless
+    you provide ``reason``, which it will use instead if it doesn't match one
+    of the choices.
+    """
     def setup(self, choices, reason=NotSpecified):
         self.choices = choices
         self.reason = reason
@@ -348,6 +685,22 @@ class integer_choice_spec(integer_spec):
         return val
 
 class string_choice_spec(string_spec):
+    """
+    Usage:
+
+        string_choice_spec(["a", "b", "c"]).normalise(meta, val)
+
+        # or
+
+        string_choice_spec(["a", "b", "c"], reason="Choose one of the first three characters in the alphabet!").normalise(meta, val)
+
+    This absurdly specific specification will make sure ``val`` is a string
+    before making sure it's one of the ``choices`` that are provided.
+
+    It defaults to complaining ``Expected one of the available choices`` unless
+    you provide ``reason``, which it will use instead if it doesn't match one
+    of the choices.
+    """
     def setup(self, choices, reason=NotSpecified):
         self.choices = choices
         self.reason = reason
@@ -364,6 +717,22 @@ class string_choice_spec(string_spec):
         return val
 
 class create_spec(Spec):
+    """
+    Usage:
+
+        create_spec(
+              kls
+            , validator1, ..., validatorn
+            , key1=spec1, ..., keyn=specn
+            ).normalise(meta, val)
+
+    This specification will return ``val`` as is if it's already an instance of
+    ``kls``.
+
+    Otherwise, it will run ``val`` through all the ``validator``s before using
+    the ``key``->``spec`` keyword arguments in a ``set_options`` specification
+    to create the arguments used to instantiate an instance of ``kls``.
+    """
     def setup(self, kls, *validators, **expected):
         self.kls = kls
         self.expected = expected
@@ -390,6 +759,16 @@ class create_spec(Spec):
         return self.kls(**result)
 
 class or_spec(Spec):
+    """
+    Usage:
+
+        or_spec(spec1, ..., specn).normalise(meta, val)
+
+    This will keep trying ``spec.normalise(meta, val)`` until it finds one that
+    doesn't raise a ``BadSpec`` error.
+
+    If it can't find one, then it raises all the errors as a group.
+    """
     def setup(self, *specs):
         self.specs = specs
 
@@ -406,6 +785,26 @@ class or_spec(Spec):
         raise BadSpecValue("Value doesn't match any of the options", meta=meta, val=val, _errors=errors)
 
 class match_spec(Spec):
+    """
+    Usage:
+
+        match_spec((typ1, spec1), ..., (typn, specn)).normalise(meta, val)
+
+        # or
+
+        match_spec((typ1, spec1), ..., (typn, specn), fallback=fspec).normalise(meta, val)
+
+    This will find the ``spec`` associated with the first ``typ`` that succeeds
+    ``isinstance(val, typ)``.
+
+    .. note:: If ``spec`` is callable, we do ``spec().normalise(meta, val)``.
+
+    If fallback is specified and none of the ``typ``s match the ``val`` then
+    ``fpsec`` is used as the ``spec``. It is also called first if it's a
+    callable object.
+
+    If we can't find a match for the ``val``, an error is raised.
+    """
     def setup(self, *specs, **kwargs):
         self.specs = specs
         self.fallback = kwargs.get("fallback")
@@ -428,6 +827,16 @@ class match_spec(Spec):
         raise BadSpecValue("Value doesn't match any of the options", meta=meta, got=type(val), expected=[expected_typ for expected_typ, _ in self.specs])
 
 class and_spec(Spec):
+    """
+    Usage:
+
+        and_spec(spec1, ..., specn).normalise(meta, val)
+
+    This will do ``val = spec.normalise(meta, val)`` for each ``spec`` that is
+    provided and returns the final ``val``.
+
+    If any of the ``spec``s fail, then an error is raised.
+    """
     def setup(self, *specs):
         self.specs = specs
 
@@ -449,6 +858,15 @@ class and_spec(Spec):
             return val
 
 class optional_spec(Spec):
+    """
+    Usage:
+
+        optional_spec(spec).normalise(meta, val)
+
+    This will return ``NotSpecified`` if the ``val`` is ``NotSpecified``.
+
+    Otherwise it merely acts as a proxy for ``spec``.
+    """
     def setup(self, spec):
         self.spec = spec
 
@@ -464,6 +882,28 @@ class optional_spec(Spec):
         return self.spec.normalise(meta, val)
 
 class dict_from_bool_spec(Spec):
+    """
+    Usage:
+
+        dict_from_bool_spec(dict_maker, spec).normalise(meta, val)
+
+    If ``val`` is ``NotSpecified`` then we do ``spec.normalise(meta, {})``
+
+    If ``val`` is a boolean, we first do ``val = dict_maker(meta, val)`` and
+    then do ``spec.normalise(meta, val)`` to return the value.
+
+    Example:
+
+        A good example is setting enabled on a dictionary:
+
+        .. code-block:: python
+
+            spec = dict_from_bool_spec(lambda b: {"enabled": b}, set_options(enabled=boolean()))
+
+            spec.normalise(meta, False) == {"enabled": False}
+
+            spec.normalise(meta, {"enabled": True}) == {"enabled": True}
+    """
     def setup(self, dict_maker, spec):
         self.spec = spec
         self.dict_maker = dict_maker
@@ -482,6 +922,33 @@ class dict_from_bool_spec(Spec):
         return self.spec.normalise(meta, val)
 
 class formatted(Spec):
+    """
+    Usage:
+
+        formatted(spec, formatter).normalise(meta, val)
+
+        # or
+
+        formatted(spec, formatter, expected_type=typ).normalise(meta, val)
+
+    This specification is a bit special and is designed to be used with
+    ``MergedOptionStringFormatter`` from the ``option_merge`` library
+    (http://option-merge.readthedocs.org/en/latest/docs/api/formatter.html).
+
+    The idea is that ``meta.everything`` is an instance of ``MergedOptions`` and
+    it will create a new instance of ``meta.everything.__class__`` using
+    ``meta.everything.converters`` and ``meta.everything.dont_prefix`` if they
+    exist. Note that this should work with normal dictionaries as well.
+
+    We then update our copy of ``meta.everything`` with ``meta.key_names()`` and
+    create an instance of ``formatter`` using this copy of the ``meta.everything``
+    , ``meta.path`` and ``spec.normalise(meta, val)`` as the value.
+
+    We call ``format`` on the ``formatter`` instance, check that it's an instance
+    of ``expected_type`` if that has been specified.
+
+    And finally, return the formatted value!
+    """
     def setup(self, spec, formatter, expected_type=NotSpecified):
         self.spec = spec
         self.formatter = formatter
@@ -515,6 +982,41 @@ class formatted(Spec):
         return formatted
 
 class many_format(Spec):
+    """
+    Usage:
+
+        many_format(spec, formatter).normalise(meta, val)
+
+        # or
+
+        many_format(spec, formatter, expected_type=typ).normalise(meta, val)
+
+    This is a fun specification!
+
+    It essentially does ``formatted(spec, formatter, expected_type=typ).normalise(meta, val)``
+    until the result doesn't change anymore.
+
+    Before doing the same thing on ``"{{{val}}}".format(val)``
+
+    Example:
+
+        Let's say we're at ``images.my_image.persistence.image_name`` in the
+        configuration.
+
+        This means ``{_key_name_2}`` (which is from ``meta.key_names()``) is
+        equal to ``my_image``.
+
+        .. code-block:: python
+
+            many_format(overridden("images.{_key_name_2}.image_name"), formatter=MergedOptionStringFormatter)
+
+            # Is equivalent to
+
+            formatted(overridden("{images.my_image.image_name}"), formatter=MergedOptionStringFormatter)
+
+        This essentially means we can format a key in the options using other
+        keys from the options!
+    """
     def setup(self, spec, formatter, expected_type=NotSpecified):
         self.spec = spec
         self.formatter = formatter
@@ -544,6 +1046,13 @@ class many_format(Spec):
         return formatted(string_spec(), formatter=self.formatter, expected_type=self.expected_type).normalise(meta, "{{{0}}}".format(val))
 
 class overridden(Spec):
+    """
+    Usage:
+
+        overridden(value).normalise(meta, val)
+
+    This will return ``value`` regardless of what ``val`` is!
+    """
     def setup(self, value):
         self.value = value
 
@@ -554,10 +1063,28 @@ class overridden(Spec):
         return self.value
 
 class any_spec(Spec):
+    """
+    Usage:
+
+        any_spec().normalise(meta, val)
+
+    Will return ``val`` regardless of what ``val`` is.
+    """
     def normalise(self, meta, val):
         return val
 
 class container_spec(Spec):
+    """
+    Usage:
+
+        container_spec(kls, spec).normalise(meta, val)
+
+    This will apply ``spec.normalise(meta, val)`` and call ``kls`` with the result
+    of that as the one argument.
+
+    .. note:: if the ``val`` is already ``isinstance(val, kls)`` then it will
+      just return ``val``.
+    """
     def setup(self, kls, spec):
         self.kls = kls
         self.spec = spec
@@ -571,6 +1098,13 @@ class container_spec(Spec):
         return self.kls(self.spec.normalise(meta, val))
 
 class delayed(Spec):
+    """
+    Usage:
+
+        delayed(spec).normalise(meta, val)
+
+    This returns a function that when called will do ``spec.normalise(meta, val)``
+    """
     def setup(self, spec):
         self.spec = spec
 
