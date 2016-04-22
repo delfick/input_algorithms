@@ -1,7 +1,47 @@
+"""
+``Meta`` is an important object that is used to keep track of our position in
+the original ``val`` when we are normalising it.
+"""
 import six
 
 class Meta(object):
-    """Holds information about some value"""
+    """
+    Meta has a concept of the wider context, kept as the ``everything`` property
+    , and the path into ``everything`` where we are.
+
+    We move around the ``everything`` by creating new instances of ``Meta`` that
+    refers to a new part: using the methods on the ``meta`` object.
+
+    Arguments
+        everything
+            The wider context
+
+        path
+            Can be given as a string or a list of tuples.
+
+            If provided as a string, it is converted to ``[(path, "")]``
+
+    Usage
+        .. automethod:: at
+
+        .. automethod:: indexed_at
+
+        .. automethod:: key_names
+
+    Useful
+        .. automethod:: __eq__
+
+        .. automethod:: __lt__
+
+        .. automethod:: __gt__
+
+    Path
+        .. automethod:: path
+
+        .. automethod:: nonspecial_path
+
+        .. automethod:: source
+    """
     everything = None
 
     def __init__(self, everything, path):
@@ -12,9 +52,15 @@ class Meta(object):
         self.everything = everything
 
     def indexed_at(self, index):
+        """
+        Return a new instance with ``("", "[index]")`` added to the path
+        """
         return self.new_path([("", "[{0}]".format(index))])
 
     def at(self, val):
+        """
+        Return a new instance with ``(path, "")`` added to the path
+        """
         return self.new_path([(val, "")])
 
     def new_path(self, part):
@@ -26,9 +72,14 @@ class Meta(object):
         return dict(("_key_name_{0}".format(index), val) for index, (val, _) in enumerate(reversed(self._path)))
 
     def __eq__(self, other):
+        """Wortk out if we have the same ``everything`` and ``path``"""
         return self.everything == other.everything and self.path == other.path
 
     def __lt__(self, other):
+        """
+        Work out if the ``str(everything) < str(other.everything)``
+        and ``path < other.path``.
+        """
         everything = self.everything
         if type(everything) is dict:
             everything = str(everything)
@@ -39,6 +90,7 @@ class Meta(object):
         return everything < other_everything and self.path < other.path
 
     def __gt__(self, other):
+        """Work out if we are not equal or less than other"""
         return self != other and not self < other
 
     @property
@@ -64,7 +116,10 @@ class Meta(object):
 
     @property
     def source(self):
-        """Return the source path of this value"""
+        """
+        Return the source path of this value
+        by asking everything for the source of this path
+        """
         if not hasattr(self.everything, "source_for"):
             return "<unknown>"
         else:

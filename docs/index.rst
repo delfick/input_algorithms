@@ -3,6 +3,7 @@
 
     docs/specs
     docs/validators
+    docs/meta
 
 .. _input_algorithms:
 
