@@ -4,6 +4,7 @@
     docs/specs
     docs/validators
     docs/meta
+    docs/dsl
 
 .. _input_algorithms:
 

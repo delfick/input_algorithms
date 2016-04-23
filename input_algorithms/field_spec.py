@@ -1,20 +1,32 @@
 """
-Classes responsible for converting an attribute based DSL
-into a fields dictionary and Spec object.
+We provide an attribute based DSL for converting attributes into the fields
+dictionary, with a classmethod for creating a create_spec object for the class.
 
-So we can define something like::
+So we can define something like:
 
-    class MyAmazingKls(six.with_metaclass(FieldSpecMetakls, FieldSpecMixin)):
+.. code-block:: python
+
+    class MyAmazingKls(dictobj.Spec):
+        one = dictobj.Field(string_spec)
+        two = dictobj.Field(string_spec, wrapper=listof)
+
+Which is equivalent to
+
+.. code-block:: python
+
+    class MyAmazingKls(six.with_metaclass(Field.metaclass, dictobj)):
         one = Field(string_spec)
         two = Field(string_spec, wrapper=listof)
 
-Which is equivalent to::
+Which is equivalent to:
 
-    class MyAmazingKls(FieldSpecMixin):
+.. code-block:: python
+
+    class MyAmazingKls(dictobj, Field.mixin):
         fields = {"one": string_spec, "two": listof(string_spec())}
 
 and have MyAmazingKls.FieldSpec().normalise for normalising a
-dictionary into an instance of MyAmazingKls
+dictionary into an instance of MyAmazingKls!
 """
 
 from input_algorithms.spec_base import create_spec, formatted, defaulted, NotSpecified
@@ -36,13 +48,16 @@ class FieldSpec(object):
         Assume self.kls has a fields dictionary of
 
         fields = {name: (description, options)}
+
         or
+
         fields = {name: options}
 
         Where options may be:
-            * A callable object to a spec or Field
-            * A spec
-            * A Field
+
+          * A callable object to a spec or Field
+          * A spec
+          * A Field
 
         If it's a Field, we create a spec from that
 
@@ -108,8 +123,9 @@ class FieldSpecMetakls(type):
     "is_input_algorithms_field" that is a Truthy value
 
     It will then:
-        * Ensure FieldSpecMixin is one of the base classes
-        * There is a fields dictionary containing all the defined Fields
+
+      * Ensure FieldSpecMixin is one of the base classes
+      * There is a fields dictionary containing all the defined Fields
     """
     def __new__(metaname, classname, baseclasses, attrs):
         fields = {}
@@ -134,9 +150,10 @@ class Field(object):
     This has a reference to the mixin and metaclass in this file.
 
     It also let's you define things like:
-        * Whether this is a formatted field
-        * has a default
-        * Is wrapped by some other spec class
+
+      * Whether this is a formatted field
+      * has a default
+      * Is wrapped by some other spec class
     """
     mixin = FieldSpecMixin
     metaclass = FieldSpecMetakls
@@ -157,11 +174,12 @@ class Field(object):
     def make_spec(self, meta, formatter):
         """
         Create the spec for this Field:
-            * If callable, then call it
-            * if it has a default, wrap in defaulted
-            * If it can be formatted, wrap in formatted
-            * If it has a wrapper, wrap it with that
-            * Return the result!
+
+          * If callable, then call it
+          * if it has a default, wrap in defaulted
+          * If it can be formatted, wrap in formatted
+          * If it has a wrapper, wrap it with that
+          * Return the result!
         """
         spec = self.spec
         if callable(spec):
