@@ -3,6 +3,7 @@
 
     docs/specs
     docs/validators
+    docs/dictobj
     docs/meta
     docs/dsl
 
