@@ -10,9 +10,11 @@ ignored and any specified value goes through the ``validate`` method.
 It is the job of the validator to raise a sublcass of ``input_algorithms.errors.BadSpec``
 if something is wrong, otherwise just return ``val``.
 """
-from input_algorithms.errors import BadSpecValue, DeprecatedKey
+from input_algorithms.errors import BadSpecValue, DeprecatedKey, BadSpecDefinition
 from input_algorithms.spec_base import Spec, NotSpecified
+from input_algorithms import spec_base as sb
 
+from itertools import chain
 import re
 
 default_validators = []
@@ -61,6 +63,106 @@ class has_either(Validator):
         if all(val.get(key, NotSpecified) is NotSpecified for key in self.choices):
             raise BadSpecValue("Need to specify atleast one of the required keys", choices=self.choices, meta=meta)
         return val
+
+@register
+class either_keys(Validator):
+    """
+    Usage
+        .. code-block:: python
+
+            either_keys([k1, k2], [k3]).normalise(meta, val)
+
+    Will complain if the value is not a dictionary
+
+    Will complain if the keys from one group are mixed with keys from another group
+
+    Will complain if keys from one group appear without the rest of the keys in that group
+
+    Will not complain if unspecified keys are in the val
+    """
+    def setup(self, *choices):
+        self.choices = choices
+        found = set()
+        duplicate = []
+        for choice in choices:
+            if type(choice) is not list:
+                raise BadSpecDefinition("Each choice must be a list", got=choice)
+
+            for key in choice:
+                if key in found:
+                    duplicate.append(key)
+                else:
+                    found.add(key)
+
+        if duplicate:
+            raise BadSpecDefinition("Found common keys in the choices", common=sorted(duplicate))
+
+    def validate(self, meta, val):
+        """Complain if we don't have a valid group"""
+        if val is NotSpecified:
+            val = None
+
+        val = sb.dictionary_spec().normalise(meta, val)
+        errors = []
+        associates = []
+        perfect_association = []
+
+        for index, group in enumerate(self.choices):
+            other_choices = list(chain.from_iterable([self.choices[i] for i in range(len(self.choices)) if i != index]))
+
+            found = []
+            missing = []
+            for key in group:
+                if key not in val:
+                    missing.append(key)
+                else:
+                    found.append(key)
+
+            if found:
+                associates.append(index)
+                if not missing:
+                    perfect_association.append(index)
+
+        if len(perfect_association) == 0:
+            if len(associates) == 0:
+                raise BadSpecValue("Value associates with no groups", val=val, choices=self.choices, meta=meta)
+
+            elif len(associates) == 1:
+                group = self.choices[associates[0]]
+                other_choices = list(chain.from_iterable([self.choices[i] for i in range(len(self.choices)) if i != associates[0]]))
+
+                found = []
+                invalid = []
+                missing = []
+                for key in group:
+                    if key not in val:
+                        missing.append(key)
+                    else:
+                        found.append(key)
+
+                for key in other_choices:
+                    if key in val:
+                        invald.append(key)
+
+                raise BadSpecValue("Missing keys from this group", group=group, found=found, invalid=invalid, missing=missing, meta=meta)
+
+            else:
+                raise BadSpecValue("Value associates with multiple groups", associates=[self.choices[i] for i in associates], got=val, meta=meta)
+
+        elif len(perfect_association) == 1:
+            other_choices = list(chain.from_iterable([self.choices[i] for i in range(len(self.choices)) if i != perfect_association[0]]))
+            invalid = []
+            for key in other_choices:
+                if key in val:
+                    invalid.append(key)
+
+            if invalid:
+                raise BadSpecValue("Value associates with a group but has keys from other groups", associates_with=self.choices[perfect_association[0]], invalid=invalid, meta=meta)
+            else:
+                return val
+
+        else:
+            raise BadSpecValue("Value associates with multiple groups", associates=[self.choices[i] for i in perfect_association], got=val, meta=meta)
 
 @register
 class no_whitespace(Validator):

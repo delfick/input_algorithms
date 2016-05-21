@@ -1,6 +1,6 @@
 # coding: spec
 
-from input_algorithms.errors import BadSpec, BadSpecValue, DeprecatedKey
+from input_algorithms.errors import BadSpec, BadSpecValue, DeprecatedKey, BadSpecDefinition
 from input_algorithms.spec_base import Spec, NotSpecified
 from input_algorithms.validators import Validator
 from input_algorithms import validators as va
@@ -50,6 +50,59 @@ describe TestCase, "has_either":
     it "Lets the val through if it has atleast one choice":
         val = {"one": 1}
         self.assertEqual(va.has_either(["one", "two"]).normalise(self.meta, val), val)
+
+describe TestCase, "either_keys":
+    before_each:
+        self.meta = mock.Mock(name="meta")
+
+    it "takes in choices as positional arguments":
+        choice1 = [mock.Mock(name="choice1")]
+        choice2 = [mock.Mock(name="choice2")]
+        validator = va.either_keys(choice1, choice2)
+        self.assertEqual(validator.choices, (choice1, choice2))
+
+    it "complains if the value is not a dictionary":
+        for val in (None, 0, 1, "", "a", [], [1], lambda: 1):
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a dictionary"):
+                va.either_keys().normalise(self.meta, val)
+
+    it "complains if any choice has a common key":
+        with self.fuzzyAssertRaisesError(BadSpecDefinition, "Found common keys in the choices", common=sorted(["two", "three"])):
+            va.either_keys(["one", "two"], ["two", "three"], ["three", "four"])
+
+    it "complains if any choice is not a list":
+        for val in (None, NotSpecified, 0, 1, "", "1", {}, {1:1}, lambda: 1):
+            with self.fuzzyAssertRaisesError(BadSpecDefinition, "Each choice must be a list", got=val):
+                va.either_keys(["one", "two"], val)
+
+    it "complains if some of the keys in the group aren't in the val":
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Missing keys from this group", group=["one", "two"], found=["one"], missing=["two"]):
+            va.either_keys(["one", "two"]).normalise(self.meta, {"one": 1})
+
+    it "can associate with a group if multiple are defined and know keys are missing":
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Missing keys from this group", group=["one", "two"], found=["one"], missing=["two"]):
+            va.either_keys(["one", "two"], ["three", "four"]).normalise(self.meta, {"one": 1})
+
+    it "can know if value associates with multiple groups":
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Value associates with multiple groups", associates=[["one", "two"], ["three", "four"]], got={"three": 3, "one": 1}):
+            va.either_keys(["one", "two"], ["three", "four"]).normalise(self.meta, {"one": 1, "three": 3})
+
+    it "can understand when it has fulfilled a group and has invalid keys":
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Value associates with a group but has keys from other groups", associates_with=["three", "four"], invalid=["one"]):
+            va.either_keys(["one", "two"], ["three", "four"]).normalise(self.meta, {"one": 1, "three": 3, "four": 4})
+
+    it "knows when val associates with no groups":
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Value associates with no groups", choices=(["one", "two"], ["three", "four"]), val={"five": 5}):
+            va.either_keys(["one", "two"], ["three", "four"]).normalise(self.meta, {"five": 5})
+
+    it "can successfully return the val if it perfectly associates with a group and no other":
+        val1 = {"three": 3, "four": 4}
+        val2 = {"three": 3, "four": 4, "five": 5}
+        res1 = va.either_keys(["one", "two"], ["three", "four"]).normalise(self.meta, val1)
+        res2 = va.either_keys(["one", "two"], ["three", "four"]).normalise(self.meta, val2)
+
+        self.assertEqual(res1, val1)
+        self.assertEqual(res2, val2)
 
 describe TestCase, "no_whitesapce":
     before_each:

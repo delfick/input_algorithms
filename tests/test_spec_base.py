@@ -182,7 +182,7 @@ describe TestCase, "dictionary specs":
 
     it "complains if the value being normalised is not a dict":
         meta = mock.Mock(name="meta")
-        for opt in (0, 1, True, False, [], [1], lambda: 1, "", "asdf", type("blah", (object, ), {})()):
+        for opt in (None, 0, 1, True, False, [], [1], lambda: 1, "", "asdf", type("blah", (object, ), {})()):
             with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a dictionary", meta=meta, got=type(opt)):
                 self.make_spec().normalise(meta, opt)
 

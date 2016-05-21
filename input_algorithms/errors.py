@@ -18,3 +18,6 @@ class BadFilename(BadSpecValue):
 class DeprecatedKey(BadSpecValue):
     desc = "Key is deprecated"
 
+class BadSpecDefinition(BadSpecValue):
+    desc = "Spec isn't defined so well"
+
