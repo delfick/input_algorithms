@@ -1204,3 +1204,18 @@ describe TestCase, "delayed":
         self.assertEqual(called, [1])
         fake_filled.assert_called_once_with(meta, with_non_defaulted=False)
 
+describe TestCase, "typed":
+    it "complains if the value is the wrong type":
+        class Wanted(object): pass
+        class AnotherType(object): pass
+
+        meta = mock.Mock(name="meta")
+        for val in (0, 1, "", "1", [], [1], {}, {1:1}, lambda: 1, AnotherType()):
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Got the wrong type of value", expected=Wanted, got=type(val)):
+                sb.typed(Wanted).normalise(meta, val)
+
+    it "returns the instance if it's the same type of class":
+        class Wanted(object): pass
+        wanted = Wanted()
+        meta = mock.Mock(name="meta")
+        self.assertIs(sb.typed(Wanted).normalise(meta, wanted), wanted)

@@ -1183,3 +1183,23 @@ class delayed(Spec):
     def fake(self, meta, with_non_defaulted=False):
         return lambda: self.spec.fake_filled(meta, with_non_defaulted=with_non_defaulted)
 
+@spec
+class typed(Spec):
+    """
+    Usage
+        .. code-block:: python
+
+            typed(kls).normalise(meta, val)
+
+    This will return the value as is as long as it's isinstance of ``kls``
+
+    Otherwise it complains that it's the wrong type
+    """
+    def setup(self, kls):
+        self.kls = kls
+
+    def normalise_filled(self, meta, val):
+        if not isinstance(val, self.kls):
+            raise BadSpecValue("Got the wrong type of value", expected=self.kls, got=type(val), meta=meta)
+        return val
+
