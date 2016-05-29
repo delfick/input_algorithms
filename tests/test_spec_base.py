@@ -1285,3 +1285,52 @@ describe TestCase, "has":
         wanted = Wanted()
         meta = mock.Mock(name="meta")
         self.assertIs(sb.has("one", "two").normalise(meta, wanted), wanted)
+
+describe TestCase, "tuple_spec":
+    it "takes in the specs to match against":
+        spec1 = mock.Mock(name="spec1")
+        spec2 = mock.Mock(name="spec2")
+        self.assertEqual(sb.tuple_spec(spec1, spec2).specs, (spec1, spec2))
+
+    describe "normalise_filled":
+        before_each:
+            self.spec1 = sb.pass_through_spec()
+            self.spec2 = sb.pass_through_spec()
+            self.meta = Meta({}, [])
+            self.ts = sb.tuple_spec(self.spec1, self.spec2)
+
+        it "complains if the value is not a tuple":
+            for val in (0, 1, "", "1", [], [1], {}, {1:1}, lambda: 1, type("thing", (object, ), {})):
+                with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a tuple", got=type(val)):
+                    self.ts.normalise(self.meta, val)
+
+        it "complains if the tuple doesn't have the same number of values as specs passed into setup":
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Expected tuple to be of a particular length", expected=2, got=1, meta=self.meta):
+                self.ts.normalise(self.meta, (1, ))
+
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Expected tuple to be of a particular length", expected=2, got=3, meta=self.meta):
+                self.ts.normalise(self.meta, (1, 2, 3))
+
+        it "raises errors if any of the specs don't match":
+            error1 = BadSpecValue("error1")
+            error3 = BadSpecValue("error3")
+
+            spec1 = mock.Mock(name="spec1")
+            spec2 = mock.Mock(name="spec2")
+            spec3 = mock.Mock(name="spec3")
+
+            spec1.normalise.side_effect = error1
+            spec2.normalise.return_value = 4
+            spec3.normalise.side_effect = error3
+
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Value failed some specifications", _errors=[error1, error3], meta=self.meta):
+                sb.tuple_spec(spec1, spec2, spec3).normalise(self.meta, (1, 2, 3))
+
+        it "returns the normalised value if all is good":
+            def normalise(m, v):
+                return v + 1
+            spec1 = mock.Mock(name="spec1")
+            spec1.normalise.side_effect = normalise
+
+            self.assertEqual(sb.tuple_spec(spec1, spec1).normalise(self.meta, (1, 3)), (2, 4))
+

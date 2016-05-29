@@ -1267,3 +1267,43 @@ class has(Spec):
             raise BadSpecValue("Value is missing required properties", required=self.properties, missing=missing, meta=meta)
 
         return val
+
+@spec
+class tuple_spec(Spec):
+    """
+    Usage
+        .. code-block:: python
+
+            tuple_spec(spec1, spec2, ..., specn).normalise(meta, val)
+
+    Will complain if the value is not a tuple or doesn't have the same number
+    of items as specified specs.
+
+    Will complain if any of the specs fail for their respective part of val.
+
+    Returns the result of running all the values through the specs as a tuple.
+    """
+
+    def setup(self, *specs):
+        self.specs = specs
+
+    def normalise_filled(self, meta, val):
+        if type(val) is not tuple:
+            raise BadSpecValue("Expected a tuple", got=type(val), meta=meta)
+
+        if len(val) != len(self.specs):
+            raise BadSpecValue("Expected tuple to be of a particular length", expected=len(self.specs), got=len(val), meta=meta)
+
+        result = []
+        errors = []
+        for index, spec in enumerate(self.specs):
+            try:
+                result.append(spec.normalise(meta.indexed_at(index), val[index]))
+            except BadSpecValue as error:
+                errors.append(error)
+
+        if errors:
+            raise BadSpecValue("Value failed some specifications", _errors=errors, meta=meta)
+
+        return tuple(result)
+
