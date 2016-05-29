@@ -10,7 +10,6 @@ from tests.helpers import TestCase
 from noseOfYeti.tokeniser.support import noy_sup_setUp
 from namedlist import namedlist
 import mock
-import six
 
 describe TestCase, "Spec":
     it "takes in positional arguments and keyword arguments":
@@ -1199,7 +1198,6 @@ describe TestCase, "container_spec":
             def __init__(self, contents):
                 if contents is not alright:
                     assert False, "Shouldn't have instantiated a new kls: Got {0}".format(contents)
-        val = mock.Mock(name="val")
 
         self.assertIs(type(sb.container_spec(kls, spec).normalise(meta, kls(alright))), kls)
         self.assertIs(len(normalise.mock_calls), 0)
@@ -1239,7 +1237,6 @@ describe TestCase, "delayed":
         spec = mock.Mock(name="spec", fake_filled=fake_filled)
 
         meta = mock.Mock(name="meta")
-        val = mock.Mock(name="val")
         result = sb.delayed(spec).fake_filled(meta)
         self.assertEqual(called, [])
 
