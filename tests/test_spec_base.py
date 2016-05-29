@@ -1262,3 +1262,26 @@ describe TestCase, "typed":
         wanted = Wanted()
         meta = mock.Mock(name="meta")
         self.assertIs(sb.typed(Wanted).normalise(meta, wanted), wanted)
+
+describe TestCase, "has":
+    it "takes in the properties to check":
+        prop1 = mock.Mock(name="prop1")
+        prop2 = mock.Mock(name="prop2")
+        self.assertEqual(sb.has(prop1, prop2).properties, (prop1, prop2))
+
+    it "complains if the value doesn't have one of the properties":
+        class Wanted(object):
+            one = 1
+
+        meta = mock.Mock(name="meta")
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Value is missing required properties",required=("one", "two"), missing=["two"], meta=meta):
+            sb.has("one", "two").normalise(meta, Wanted())
+
+    it "returns the instance if has all the specified properties":
+        class Wanted(object):
+            one = 1
+            two = 2
+            three = 3
+        wanted = Wanted()
+        meta = mock.Mock(name="meta")
+        self.assertIs(sb.has("one", "two").normalise(meta, wanted), wanted)

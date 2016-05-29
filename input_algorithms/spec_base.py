@@ -1242,3 +1242,28 @@ class typed(Spec):
             raise BadSpecValue("Got the wrong type of value", expected=self.kls, got=type(val), meta=meta)
         return val
 
+@spec
+class has(Spec):
+    """
+    Usage
+        .. code-block:: python
+
+            has(prop1, prop2, ..., propn).normalise(meta, val)
+
+    This will complain if the value does not have any of the specified
+    properties (using hasattr)
+    """
+
+    def setup(self, *properties):
+        self.properties = properties
+
+    def normalise_filled(self, meta, val):
+        missing = []
+        for prop in self.properties:
+            if not hasattr(val, prop):
+                missing.append(prop)
+
+        if missing:
+            raise BadSpecValue("Value is missing required properties", required=self.properties, missing=missing, meta=meta)
+
+        return val
