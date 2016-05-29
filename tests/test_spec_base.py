@@ -265,6 +265,49 @@ describe TestCase, "dictionary specs":
             spec = self.make_spec(value_spec=sb.integer_spec(), nested=True)
             self.assertEqual(spec.normalise(meta, val), {"one": {"two": 3}, "four": 4, "five": 5})
 
+describe TestCase, "tupleof":
+    before_each:
+        self.meta = mock.Mock(name="meta", spec_set=Meta)
+        self.spec = pass_through_spec()
+        self.to = sb.tupleof(self.spec)
+
+    it "takes in a spec":
+        spec = mock.Mock(name="spec")
+        lo = sb.tupleof(spec)
+        self.assertEqual(lo.spec, spec)
+
+    it "has a default value of an empty tupe":
+        self.assertEqual(self.to.default(self.meta), ())
+
+    it "turns the value into a tuple if not already a list":
+        for opt in (0, 1, True, False, {}, {1:1}, lambda: 1, "", "asdf", type("blah", (object, ), {})()):
+            self.assertEqual(self.to.normalise(self.meta, opt), (opt, ))
+
+    it "turns lists into tuples of those items":
+        self.assertEqual(self.to.normalise(self.meta, [1, 2, 3]), (1, 2, 3))
+
+    it "doesn't turn a tuple into a tuple of itself":
+        self.assertEqual(self.to.normalise(self.meta, ()), ())
+        self.assertEqual(self.to.normalise(self.meta, (1, 2)), (1, 2))
+
+    it "complains about values that don't match the spec":
+        meta = mock.Mock(name="meta")
+        spec = mock.Mock(name="spec")
+        error_two = BadSpecValue("two")
+        error_four = BadSpecValue("four")
+        def normalise(meta, val):
+            if val == 2:
+                raise error_two
+            elif val == 4:
+                raise error_four
+            else:
+                return val
+        spec.normalise.side_effect = normalise
+
+        self.to.spec = spec
+        with self.fuzzyAssertRaisesError(BadSpecValue, meta=meta, _errors=[error_two, error_four]):
+            self.to.normalise(meta, [1, 2, 3, 4])
+
 describe TestCase, "listof":
     before_each:
         self.meta = mock.Mock(name="meta", spec_set=Meta)

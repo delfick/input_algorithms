@@ -280,6 +280,45 @@ class dictof(dictionary_spec):
         return result
 
 @spec
+class tupleof(Spec):
+    """
+    Usage
+        .. code-block:: python
+
+            tupleof(spec).normalise(meta, val)
+
+    This specification will transform ``NotSpecified`` into ``()``
+
+    If we don't have a tuple, we turn the value into a tuple of that value.
+    Except for lists which are turned in a tuple.
+
+    The resulting tuple of items is returned.
+    """
+    def setup(self, spec):
+        self.spec = spec
+
+    def default(self, meta):
+        return ()
+
+    def normalise_filled(self, meta, val):
+        """Turn this into a tuple of it's not and normalise all the items in the tuple"""
+        if not isinstance(val, list) and not isinstance(val, tuple):
+            val = [val]
+
+        result = []
+        errors = []
+        for index, item in enumerate(val):
+            try:
+                result.append(self.spec.normalise(meta.indexed_at(index), item))
+            except BadSpec as error:
+                errors.append(error)
+
+        if errors:
+            raise BadSpecValue(meta=meta, _errors=errors)
+
+        return tuple(result)
+
+@spec
 class listof(Spec):
     """
     Usage
