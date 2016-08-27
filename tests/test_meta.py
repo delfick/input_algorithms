@@ -21,6 +21,9 @@ describe TestCase, "Meta":
     it "is not equal to another meta with a different path":
         assert not Meta({}, [("hello", "")]) == Meta({}, []).at("there")
 
+    it "can generate an empty Meta":
+        self.assertEqual(Meta({}, []), Meta.empty())
+
     describe "New path":
         before_each:
             self.p1 = mock.Mock(name="p1")

@@ -44,6 +44,10 @@ class Meta(object):
     """
     everything = None
 
+    @classmethod
+    def empty(kls):
+        return kls({}, [])
+
     def __init__(self, everything, path):
         self._path = path
         if isinstance(self._path, six.string_types):
