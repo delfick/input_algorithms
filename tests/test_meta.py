@@ -114,10 +114,15 @@ describe TestCase, "Meta":
             everything = mock.Mock(name="everything")
 
             meta = Meta(everything, [("one", ""), ("three", ""), ("five", ""), ("", [1])])
-            source = []
-            everything.source_for.return_value = source
 
-            self.assertEqual(meta.delfick_error_format("blah"), "{{path=one.three.five[1]}}".format(source))
+            everything.source_for.return_value = []
+            self.assertEqual(meta.delfick_error_format("blah"), "{path=one.three.five[1]}")
+
+            everything.source_for.return_value = None
+            self.assertEqual(meta.delfick_error_format("blah"), "{path=one.three.five[1]}")
+
+            everything.source_for.return_value = "<unknown>"
+            self.assertEqual(meta.delfick_error_format("blah"), "{path=one.three.five[1]}")
 
     describe "Getting key names":
         it "returns all the parts of the path as _key_name_i":

@@ -134,7 +134,7 @@ class Meta(object):
 
     def delfick_error_format(self, key):
         """Format a string for display in a delfick error"""
-        if not self.source:
+        if self.source in (None, "<unknown>") or self.source == []:
             return "{{path={0}}}".format(self.path)
         else:
             return "{{source={0}, path={1}}}".format(self.source, self.path)
