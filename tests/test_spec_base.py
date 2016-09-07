@@ -731,7 +731,7 @@ describe TestCase, "integer_spec":
     it "complains if it can't convert the value into an integer":
         meta = mock.Mock(name="meta")
         val = mock.Mock(name="val")
-        with self.fuzzyAssertRaisesError(BadSpecValue, "Couldn't transform value into an integer", error="int() argument must be a string or a number, not 'Mock'"):
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Couldn't transform value into an integer"):
             sb.integer_spec().normalise(meta, val)
 
     it "keeps integers as integers":
