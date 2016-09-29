@@ -12,6 +12,34 @@ import mock
 import six
 
 describe TestCase, "FieldSpec":
+    describe "usage":
+        it "works":
+            class MyKls(dictobj.Spec):
+                one = dictobj.Field(sb.string_spec())
+                two = dictobj.Field(sb.integer_spec())
+
+            res = MyKls.FieldSpec().normalise(Meta.empty(), {"one": "1", "two": "2"})
+            self.assertEqual(type(res), MyKls)
+            self.assertEqual(res.one, "1")
+            self.assertEqual(res.two, 2)
+
+        it "works with a seperate create_kls":
+            class MyKls(dictobj.Spec):
+                one = dictobj.Field(sb.string_spec())
+                two = dictobj.Field(sb.integer_spec())
+
+            called = []
+            class CreateKls(object):
+                def __init__(self, **kwargs):
+                    called.append(kwargs)
+                    self.kwargs = kwargs
+
+            res = MyKls.FieldSpec(create_kls=CreateKls).normalise(Meta.empty(), {"one": "1", "two": "2"})
+
+            self.assertEqual(res.kwargs, {"one": "1", "two": 2})
+            self.assertEqual(type(res), CreateKls)
+            self.assertEqual(called, [{"one": "1", "two": 2}])
+
     describe "make_spec":
         before_each:
             self.ret = mock.Mock(name="spec")

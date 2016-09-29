@@ -39,8 +39,9 @@ class FieldSpec(object):
     Responsible for defining the Spec object used to convert a
     dictionary into an instance of the kls.
     """
-    def __init__(self, kls, formatter=None):
+    def __init__(self, kls, formatter=None, create_kls=None):
         self.kls = kls
+        self.create_kls = create_kls or kls
         self.formatter = formatter
 
     def make_spec(self, meta):
@@ -95,7 +96,7 @@ class FieldSpec(object):
         if errors:
             raise BadSpec(_errors=errors)
 
-        return create_spec(self.kls, **kwargs)
+        return create_spec(self.create_kls, **kwargs)
 
     def normalise(self, meta, val):
         """Normalise val with the spec from self.make_spec"""
