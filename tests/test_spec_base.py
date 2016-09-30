@@ -1331,3 +1331,16 @@ describe TestCase, "tuple_spec":
 
             self.assertEqual(sb.tuple_spec(spec1, spec1).normalise(self.meta, (1, 3)), (2, 4))
 
+describe TestCase, "none_spec":
+    it "defaults to None":
+        self.assertIs(sb.none_spec().normalise(Meta.empty(), NotSpecified), None)
+
+    it "likes the None Value":
+        self.assertIs(sb.none_spec().normalise(Meta.empty(), None), None)
+
+    it "dislikes anything other than None":
+        meta = Meta.empty()
+        for v in (0, 1, True, False, {}, {1:2}, [], [1], lambda: None):
+            with self.fuzzyAssertRaisesError(BadSpecValue, "Expected None", got=v, meta=meta):
+                sb.none_spec().normalise(meta, v)
+

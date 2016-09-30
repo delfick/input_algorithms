@@ -1,6 +1,6 @@
 # coding: spec
 
-from input_algorithms.field_spec import FieldSpec, Field, FieldSpecMixin, FieldSpecMetakls
+from input_algorithms.field_spec import FieldSpec, Field, NullableField, FieldSpecMixin, FieldSpecMetakls
 from input_algorithms import spec_base as sb
 from input_algorithms.dictobj import dictobj
 from input_algorithms.errors import BadSpec
@@ -16,12 +16,14 @@ describe TestCase, "FieldSpec":
         it "works":
             class MyKls(dictobj.Spec):
                 one = dictobj.Field(sb.string_spec())
-                two = dictobj.Field(sb.integer_spec())
+                two = dictobj.Field(sb.integer_spec)
+                three = dictobj.NullableField(sb.integer_spec)
 
             res = MyKls.FieldSpec().normalise(Meta.empty(), {"one": "1", "two": "2"})
             self.assertEqual(type(res), MyKls)
             self.assertEqual(res.one, "1")
             self.assertEqual(res.two, 2)
+            self.assertEqual(res.three, None)
 
         it "works with a seperate create_kls":
             class MyKls(dictobj.Spec):
@@ -198,6 +200,14 @@ describe TestCase, "FieldSpecMetaKls":
 
         assert hasattr(MyKls, "FieldSpec")
 
+describe TestCase, "NullableField":
+    it "is Field but with nullable=True":
+        spec = mock.Mock(name="spec")
+        field = NullableField(spec, default=False)
+        self.assertIs(issubclass(type(field), Field), True)
+        self.assertEqual(field.nullable, True)
+        self.assertEqual(field.default, False)
+
 describe TestCase, "Field":
     it "references mixin and metaclass":
         self.assertIs(Field.mixin, FieldSpecMixin)
@@ -267,4 +277,28 @@ describe TestCase, "Field":
         it "wraps everything in wrapper if it's defined":
             spec = Field(sb.string_or_int_as_string_spec, wrapper=sb.listof).make_spec(self.meta, self.formatter)
             self.assertEqual(spec.normalise(self.meta, 1), ["1"])
+
+        describe "nullable=True":
+            it "defaults to None":
+                spec = NullableField(sb.string_spec).make_spec(self.meta, self.formatter)
+                self.assertEqual(spec.normalise(self.meta, sb.NotSpecified), None)
+
+            it "allows None as a value":
+                class i_hate_none_spec(sb.Spec):
+                    def normalise_filled(self, meta, val):
+                        if val is None:
+                            raise Exception("I hate None", got=val, meta=meta)
+                        return None
+
+                spec = NullableField(i_hate_none_spec).make_spec(self.meta, self.formatter)
+                self.assertEqual(spec.normalise(self.meta, sb.NotSpecified), None)
+
+            it "calls the spec for you":
+                spec = NullableField(sb.integer_spec).make_spec(self.meta, self.formatter)
+                self.assertEqual(spec.normalise(self.meta, "1"), 1)
+
+            it "still respects default":
+                dflt = mock.Mock(name="dflt")
+                spec = NullableField(sb.string_spec, default=dflt).make_spec(self.meta, self.formatter)
+                self.assertEqual(spec.normalise(self.meta, sb.NotSpecified), dflt)
 

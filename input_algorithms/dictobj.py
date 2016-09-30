@@ -60,7 +60,7 @@ you wish!
 
     instance.as_dict() == {"one": 1, "two": 2, "three": 4}
 """
-from input_algorithms.field_spec import Field, FieldSpecMetakls
+from input_algorithms.field_spec import Field, NullableField, FieldSpecMetakls
 
 from namedlist import namedlist
 import six
@@ -73,6 +73,7 @@ class dictobj(dict):
     is_dict = True
 
     Field = Field
+    NullableField = NullableField
 
     def make_defaults(self):
         """Make a namedtuple for extracting our wanted keys"""

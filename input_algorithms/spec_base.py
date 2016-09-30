@@ -7,6 +7,7 @@ and transform data.
 """
 from input_algorithms.errors import BadSpec, BadSpecValue, BadDirectory, BadFilename
 
+from datetime import datetime
 import operator
 import six
 import os
@@ -1306,4 +1307,25 @@ class tuple_spec(Spec):
             raise BadSpecValue("Value failed some specifications", _errors=errors, meta=meta)
 
         return tuple(result)
+
+@spec
+class none_spec(Spec):
+    """
+    Usage
+        .. code-block:: python
+
+            none_spec().normalise(meta, val)
+
+    Will complain if the value is not None. Otherwise returns None.
+
+    Defaults to None.
+    """
+    def normalise_empty(self, meta):
+        return None
+
+    def normalise_filled(self, meta, val):
+        if val is None:
+            return None
+        else:
+            raise BadSpecValue("Expected None", got=val, meta=meta)
 

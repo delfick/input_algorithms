@@ -9,6 +9,7 @@ So we can define something like:
     class MyAmazingKls(dictobj.Spec):
         one = dictobj.Field(string_spec)
         two = dictobj.Field(string_spec, wrapper=listof)
+        three = dictobj.NullableField(string_spec)
 
 Which is equivalent to
 
@@ -17,19 +18,20 @@ Which is equivalent to
     class MyAmazingKls(six.with_metaclass(Field.metaclass, dictobj)):
         one = Field(string_spec)
         two = Field(string_spec, wrapper=listof)
+        three = Field(string_spec, nullable=True)
 
 Which is equivalent to:
 
 .. code-block:: python
 
     class MyAmazingKls(dictobj, Field.mixin):
-        fields = {"one": string_spec, "two": listof(string_spec())}
+        fields = {"one": string_spec, "two": listof(string_spec()), "three": defaulted(or_spec(none_spec(), string_spec()), None)}
 
 and have MyAmazingKls.FieldSpec().normalise for normalising a
 dictionary into an instance of MyAmazingKls!
 """
 
-from input_algorithms.spec_base import create_spec, formatted, defaulted, NotSpecified
+from input_algorithms.spec_base import create_spec, formatted, defaulted, NotSpecified, none_spec, or_spec
 from input_algorithms.errors import BadSpec
 
 import six
@@ -82,7 +84,7 @@ class FieldSpec(object):
             if callable(options):
                 options = options()
 
-            if type(options) is Field:
+            if isinstance(options, Field):
                 try:
                     spec = options.make_spec(meta.at(name), self.formatter)
                 except BadSpec as error:
@@ -165,11 +167,13 @@ class Field(object):
         , formatted=False
         , wrapper=NotSpecified
         , default=NotSpecified
+        , nullable=False
         ):
         self.spec = spec
         self.help = help
         self.default = default
         self.wrapper = wrapper
+        self.nullable = nullable
         self.formatted = formatted
 
     def make_spec(self, meta, formatter):
@@ -186,6 +190,9 @@ class Field(object):
         if callable(spec):
             spec = spec()
 
+        if self.nullable:
+            spec = defaulted(or_spec(none_spec(), spec), None)
+
         if self.default is not NotSpecified:
             spec = defaulted(spec, self.default)
 
@@ -199,4 +206,11 @@ class Field(object):
             spec = self.wrapper(spec)
 
         return spec
+
+class NullableField(Field):
+    is_input_algorithms_field = True
+
+    def __init__(self, spec, **kwargs):
+        kwargs["nullable"] = True
+        super(NullableField, self).__init__(spec, **kwargs)
 
