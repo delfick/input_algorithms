@@ -127,6 +127,24 @@ describe TestCase, "FieldSpec":
                 , {"two": self.ret}
                 )
 
+    describe "empty_normalise":
+        it "just calls normalise with an empty meta":
+            class MyKls(dictobj.Spec):
+                fields = dictobj.Field(sb.string_spec())
+
+            res = mock.Mock(name="res")
+            fake_normalise = mock.Mock(name="normalise", return_value=res)
+            fake_empty = mock.Mock(name="empty")
+            fakeMeta = mock.Mock(name="Meta")
+            fakeMeta.empty.return_value = fake_empty
+
+            spec = MyKls.FieldSpec()
+            with mock.patch("input_algorithms.field_spec.Meta", fakeMeta):
+                with mock.patch.object(spec, "normalise", fake_normalise):
+                    self.assertIs(spec.empty_normalise(one="one", two="two"), res)
+
+            fake_normalise.assert_called_once_with(fake_empty, {"one": "one", "two": "two"})
+
     describe "normalise":
         it "complains about a class that has no fields":
             class MyKls(object):

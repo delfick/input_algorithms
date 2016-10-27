@@ -33,6 +33,7 @@ dictionary into an instance of MyAmazingKls!
 
 from input_algorithms.spec_base import create_spec, formatted, defaulted, NotSpecified, none_spec, or_spec
 from input_algorithms.errors import BadSpec
+from input_algorithms.meta import Meta
 
 import six
 
@@ -103,6 +104,10 @@ class FieldSpec(object):
     def normalise(self, meta, val):
         """Normalise val with the spec from self.make_spec"""
         return self.make_spec(meta).normalise(meta, val)
+
+    def empty_normalise(self, **kwargs):
+        """Normalise val with the spec from self.make_spec"""
+        return self.normalise(Meta.empty(), kwargs)
 
 class FieldSpecMixin(object):
     """
