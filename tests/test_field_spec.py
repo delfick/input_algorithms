@@ -250,6 +250,50 @@ describe TestCase, "Field":
         self.assertIs(field.wrapper, wrapper)
         self.assertIs(field.default, default)
 
+    describe "clone":
+        it "creates a new instance with the same fields":
+            spec = mock.Mock(name="spec")
+            help = mock.Mock(name="help")
+            formatted = mock.Mock(name="formatted")
+            wrapper = mock.Mock(name="wrapper")
+            default = mock.Mock(name="default")
+
+            field = Field(spec, help=help, formatted=formatted, wrapper=wrapper, default=default)
+            clone = field.clone()
+
+            self.assertIsNot(field, clone)
+
+            for f in (field, clone):
+                self.assertIs(f.spec, spec)
+                self.assertIs(f.help, help)
+                self.assertIs(f.formatted, formatted)
+                self.assertIs(f.wrapper, wrapper)
+                self.assertIs(f.default, default)
+
+            # Make sure we can change the clone and not effect the original
+            clone.formatted = False
+            self.assertIs(field.formatted, formatted)
+
+        it "allows overrides":
+            spec = mock.Mock(name="spec")
+            help = mock.Mock(name="help")
+            formatted = mock.Mock(name="formatted")
+            formatted2 = mock.Mock(name="formatted2")
+            wrapper = mock.Mock(name="wrapper")
+            default = mock.Mock(name="default")
+            default2 = mock.Mock(name="default2")
+
+            field = Field(spec, help=help, formatted=formatted, wrapper=wrapper, default=default)
+            clone = field.clone(formatted=formatted2, default=default2)
+
+            self.assertIsNot(field, clone)
+
+            self.assertIs(clone.spec, spec)
+            self.assertIs(clone.help, help)
+            self.assertIs(clone.formatted, formatted2)
+            self.assertIs(clone.wrapper, wrapper)
+            self.assertIs(clone.default, default2)
+
     describe "make_spec":
         before_each:
             self.meta = Meta({}, [])

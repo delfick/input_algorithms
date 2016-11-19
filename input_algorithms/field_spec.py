@@ -181,6 +181,15 @@ class Field(object):
         self.nullable = nullable
         self.formatted = formatted
 
+    def clone(self, **overrides):
+        return self.__class__(self.spec
+            , help = overrides.get("help", self.help)
+            , formatted = overrides.get("formatted", self.formatted)
+            , wrapper = overrides.get("wrapper", self.wrapper)
+            , default = overrides.get("default", self.default)
+            , nullable = overrides.get("nullable", self.nullable)
+            )
+
     def make_spec(self, meta, formatter):
         """
         Create the spec for this Field:
