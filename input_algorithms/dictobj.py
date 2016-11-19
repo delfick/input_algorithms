@@ -61,6 +61,8 @@ you wish!
     instance.as_dict() == {"one": 1, "two": 2, "three": 4}
 """
 from input_algorithms.field_spec import Field, NullableField, FieldSpecMetakls
+from input_algorithms import spec_base as sb
+from input_algorithms.errors import BadSpec
 
 from namedlist import namedlist
 import six
@@ -190,5 +192,154 @@ class dictobj(dict):
             else:
                 result[field] = val
         return result
+
+    @classmethod
+    def selection(kls, kls_name, wanted, **kwargs):
+        """
+        Return a new dictobj() that only creates a new class with a selection of the fields
+
+        We can also mark some fields as required, some as optional, or all as optional/required.
+
+        For example:
+
+        .. code-block:: python
+
+            class Blah(dictobj.Spec):
+                one = dictobj.Field(sb.string_spec())
+                two = dictobj.Field(sb.string_spec())
+                three = dictobj.Field(sb.string_spec())
+
+            Meh = Blah.selection("Meh", ["one", "two"], all_optional=True)
+
+            meh = Meh(one="1")
+            assert meh.one == "1"
+            assert meh.two is sb.NotSpecified
+            assert not hasattr(meh, "three")
+
+        keyword Options are as follows:
+
+        optional
+            list of keys to make optional
+
+        required
+            list of keys to make required
+
+        all_required
+            boolean saying to set all keys to required
+
+        all_optional
+            boolean saying to set all keys to optional
+
+        This works by returning a new class with only some of the fields in the fields list
+
+        .. note:: The keyword options only work for dictobj.Spec objects and are ignored for normal dictobj objects
+        """
+        fields = kls.fields
+        name_map = {}
+        any_spec = sb.any_spec()
+
+        # Make a map of name of the field to the field itself
+        # Fields may be either <name> or (<name>, <default>)
+        for field in fields:
+            field_name = field
+            if type(field) is tuple:
+                field_name = field_name[0]
+            name_map[field_name] = field
+
+        # Make sure we are selecting fields that exist
+        missing = set(wanted) - set(name_map)
+        if missing:
+            raise BadSpec("Tried to make a selection from keys that don't exist", missing=missing, available=list(name_map), wanted=wanted)
+
+        # The final result isn't inheriting from kls so that we can not inherit fields we don't want
+        # But we still want everything else from kls to pretend it's inherited.......
+        # I doubt this will work with super though..... feel free to raise an issue if this is undesirable...
+        attrs = {}
+        extra = set(dir(kls)) - set(dir(dictobj)) - set(name_map) - set(["FieldSpec"])
+        attrs.update(dict((k, getattr(dictobj, k)) for k in extra))
+
+        # Collect our new fields
+        new_fields = {}
+        for field_name, field in name_map.items():
+            if field_name in wanted:
+                if type(fields) is dict:
+                    new_fields[field] = fields[field]
+                else:
+                    new_fields[field] = any_spec
+
+        if not hasattr(kls, "FieldSpec"):
+            # We weren't selecting from dictobj.Spec, so let's just set the fields and be done
+            # Normal dictobj has no normalise functionality and so no point in setting such things
+            attrs["fields"] = new_fields
+            return type(kls_name, (dictobj, ), attrs)
+
+        # Ok, so, for dictobj.Spec, we set attrs on the class rather than fields
+        # So let's seed the attrs with our cloned fields
+        for name in name_map:
+            if name in wanted:
+                attrs[name] = getattr(kls, name)
+                if getattr(attrs[name], "is_input_algorithms_field", False):
+                    attrs[name] = attrs[name].clone()
+
+        def wrap(spec, wrapper):
+            """Helper to wrap a spec with some wrapper"""
+            h = None
+            s = spec
+
+            # A spec can be <options> or (<help string, <options>)
+            if type(s) is tuple:
+                h, s = spec
+
+            # <options> can be a callable, an input_algorithms field or, well, it shouldn't be anything else...
+            if callable(s):
+                s = lambda: wrapper(s())
+            else:
+                if getattr(s, "is_input_algorithms_field", False):
+                    # We don't want to override the default with optional_spec
+                    if wrapper is sb.optional_spec and s.default is not sb.NotSpecified:
+                        s = s.clone()
+                    else:
+                        # We also don't want to override an existing wrapper
+                        if s.wrapper is not sb.NotSpecified:
+                            s = s.clone(wrapper=lambda spec: wrapper(s.wrapper(spec)))
+                        else:
+                            s = s.clone(wrapper=wrapper)
+                else:
+                    s = lambda: wrapper(s or any_spec)
+
+            return s
+
+        def all_wrap(key, wrapper):
+            """helper for wrapping all fields"""
+            if kwargs.get(key):
+                for field, val in new_fields.items():
+                    attrs[field] = wrap(val, wrapper)
+
+        def specific_wrap(key, wrapper):
+            """Helper for wrapping specific keys"""
+            missing = []
+            for field_name in kwargs.get(key, []):
+                field = name_map[field_name]
+                if field in new_fields:
+                    attrs[field] = wrap(new_fields[field], wrapper)
+                else:
+                    missing.append(field_name)
+            if missing:
+                raise BadSpec("Tried to wrap keys that didn't exist", wrap_as=key, missing=missing, available=list(name_map), wanted=kwargs.get(key))
+
+        # Ok, now we use our wrap helper for optional settings
+        all_wrap("all_optional", sb.optional_spec)
+
+        # Required is used to override all_optional
+        specific_wrap("required", sb.required)
+
+        # Set all things to required if so desired
+        all_wrap("all_required", sb.required)
+
+        # And override all_required with optional
+        specific_wrap("optional", sb.optional_spec)
+
+        # Finally, we return our new class!
+        return type(kls_name, (dictobj.Spec, ), attrs)
 
 dictobj.Spec = six.with_metaclass(FieldSpecMetakls, dictobj)
