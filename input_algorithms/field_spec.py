@@ -85,6 +85,7 @@ class FieldSpec(object):
             if callable(options):
                 options = options()
 
+            spec = None
             if isinstance(options, Field):
                 try:
                     spec = options.make_spec(meta.at(name), self.formatter)
