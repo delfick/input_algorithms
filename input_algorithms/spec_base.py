@@ -22,6 +22,8 @@ def spec(func):
 class NotSpecified(object):
     """Tell the difference between None and not specified"""
 
+    _merged_options_formattable = True
+
     def __repr__(self):
         return "<NotSpecified>"
 
