@@ -1,6 +1,6 @@
 # coding: spec
 
-from helpers import TestCase
+from tests.helpers import TestCase
 
 from input_algorithms.errors import BadSpecValue
 from input_algorithms.dictobj import dictobj
@@ -31,7 +31,7 @@ describe TestCase, "Selection":
             self.assertEqual(changed.one, 2)
             self.assertEqual(changed.two, 5)
 
-            self.assertEqual(sorted(changed.fields), sorted([("one", 2), "two"]))
+            self.assertEqual(sorted(str(t) for t in changed.fields), sorted([str(t) for t in (("one", 2), "two")]))
 
         it "works for fields that are dictionaries to help messages":
             class Original(dictobj):

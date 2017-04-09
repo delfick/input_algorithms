@@ -17,6 +17,7 @@ setup(
         [ "nose"
         , "mock"
         , "noseOfYeti"
+        , 'delfick_error>=1.7.8'
         ]
       }
 
