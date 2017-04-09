@@ -1082,14 +1082,66 @@ describe TestCase, "formatted":
         self.meta = mock.Mock(name="meta", spec_set=Meta)
         self.spec = mock.Mock(name="spec")
 
-    it "takes in spec, formatter and expected_type":
+    it "takes in spec, formatter and expected_type and after_format":
         spec = mock.Mock(name="spec")
         formatter = mock.Mock(name="formatter")
+        after_format = mock.Mock(name="after_format")
         expected_type = mock.Mock(name="expected_type")
-        formatted = sb.formatted(spec, formatter, expected_type)
+        formatted = sb.formatted(spec, formatter, expected_type, after_format)
         self.assertIs(formatted.spec, spec)
         self.assertIs(formatted.formatter, formatter)
+        self.assertIs(formatted.after_format, after_format)
         self.assertIs(formatted.expected_type, expected_type)
+
+    it "doesn't use formatter if we have after_format and the spec.normalise result is not a string":
+        # Doing anything on the formatter will raise an exception and fail the test
+        formatter = mock.NonCallableMock(name="formatter", spec=[])
+
+        val = mock.Mock(name="val")
+        result = mock.Mock(name="result")
+
+        spec = sb.any_spec()
+        af = mock.NonCallableMock(name="af")
+        af.normalise.return_value = result
+
+        formatted_spec = sb.formatted(spec, formatter=formatter, after_format=af)
+        self.assertIs(formatted_spec.normalise(self.meta, val), result)
+
+        af.normalise.assert_called_once_with(self.meta, val)
+
+    it "doesn't use formatter if we have after_format and the spec.normalise result is not a string and after_format needs to be called first":
+        # Doing anything on the formatter will raise an exception and fail the test
+        formatter = mock.NonCallableMock(name="formatter", spec=[])
+
+        val = mock.Mock(name="val")
+        result = mock.Mock(name="result")
+
+        spec = sb.any_spec()
+        af = mock.Mock(name="af")
+        af.normalise.return_value = result
+
+        afk = mock.Mock(name="afk", return_value=af)
+
+        formatted_spec = sb.formatted(spec, formatter=formatter, after_format=afk)
+        self.assertIs(formatted_spec.normalise(self.meta, val), result)
+
+        af.normalise.assert_called_once_with(self.meta, val)
+
+    it "uses after_format on the formatted value from the formatter if we have after_format":
+        spec = sb.string_spec()
+        val = "{thing}"
+        after_format = sb.integer_spec
+
+        formatter = mock.Mock(name="formatter")
+        formatter.format.return_value = "12"
+
+        formatterK = mock.Mock(name="formatterK", return_value=formatter)
+
+        formatted_spec = sb.formatted(spec, formatter=formatterK, after_format=after_format)
+
+        self.assertIs(formatted_spec.normalise(self.meta, val), 12)
+
+        formatterK.assert_called_once_with(mock.ANY, mock.ANY, value="{thing}")
 
     it "uses the formatter":
         meta_path = mock.Mock(name="path")
@@ -1128,7 +1180,16 @@ describe TestCase, "formatted":
         self.meta.everything = {}
         self.meta.key_names.return_value = {}
         with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a different type", expected=mock.Mock, got=str):
-            sb.formatted(spec, formatter, expected_type=mock.Mock).normalise(self.meta, self.val)
+            sb.formatted(spec, formatter, expected_type=mock.Mock).normalise(self.meta, "{blah}")
+
+    it "complains if after_format value has wrong type":
+        formatter = lambda *args, **kwargs: "13"
+        spec = sb.any_spec()
+        after_format = sb.integer_spec
+        self.meta.everything = {}
+        self.meta.key_names.return_value = {}
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Expected a different type", expected=mock.Mock, got=int):
+            sb.formatted(spec, formatter, expected_type=mock.Mock, after_format=after_format).normalise(self.meta, "{yeap}")
 
     it "works with normal dictionary meta.everything":
         formatter = lambda *args, **kwargs: "asdf"

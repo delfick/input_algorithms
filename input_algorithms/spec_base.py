@@ -1032,6 +1032,10 @@ class formatted(Spec):
 
             formatted(spec, formatter, expected_type=typ).normalise(meta, val)
 
+            # or
+
+            formatted(spec, formatter, after_format=some_spec()).normlise(meta, val)
+
     This specification is a bit special and is designed to be used with
     ``MergedOptionStringFormatter`` from the ``option_merge`` library
     (http://option-merge.readthedocs.org/en/latest/docs/api/formatter.html).
@@ -1048,11 +1052,15 @@ class formatted(Spec):
     We call ``format`` on the ``formatter`` instance, check that it's an instance
     of ``expected_type`` if that has been specified.
 
-    And finally, return the formatted value!
+    Once we have our formatted value, we normalise it with after_format if that was
+    specified.
+
+    And finally, return a value!
     """
-    def setup(self, spec, formatter, expected_type=NotSpecified):
+    def setup(self, spec, formatter, expected_type=NotSpecified, after_format=NotSpecified):
         self.spec = spec
         self.formatter = formatter
+        self.after_format = after_format
         self.expected_type = expected_type
         self.has_expected_type = self.expected_type and self.expected_type is not NotSpecified
 
@@ -1073,8 +1081,19 @@ class formatted(Spec):
         options.update(meta.key_names())
         options.update(meta.everything)
 
+        af = self.after_format
+        if af != NotSpecified:
+            af = self.after_format
+            if callable(af):
+                af = af()
+
         specd = self.spec.normalise(meta, val)
+        if not isinstance(specd, six.string_types) and af != NotSpecified:
+            return af.normalise(meta, specd)
+
         formatted = self.formatter(options, meta.path, value=specd).format()
+        if af != NotSpecified:
+            formatted = af.normalise(meta, formatted)
 
         if self.has_expected_type:
             if not isinstance(formatted, self.expected_type):
