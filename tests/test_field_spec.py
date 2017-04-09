@@ -1,9 +1,9 @@
 # coding: spec
 
 from input_algorithms.field_spec import FieldSpec, Field, NullableField, FieldSpecMixin, FieldSpecMetakls
+from input_algorithms.errors import BadSpec, ProgrammerError
 from input_algorithms import spec_base as sb
 from input_algorithms.dictobj import dictobj
-from input_algorithms.errors import BadSpec
 from input_algorithms.meta import Meta
 
 from noseOfYeti.tokeniser.support import noy_sup_setUp
@@ -226,6 +226,13 @@ describe TestCase, "NullableField":
         self.assertEqual(field.nullable, True)
         self.assertEqual(field.default, False)
 
+    it "is Field but with nullable=True and works with format_into instead of spec":
+        format_into = mock.Mock(name="format_into")
+        field = NullableField(default=False, format_into=format_into)
+        self.assertIs(issubclass(type(field), Field), True)
+        self.assertEqual(field.nullable, True)
+        self.assertEqual(field.default, False)
+
 describe TestCase, "Field":
     it "references mixin and metaclass":
         self.assertIs(Field.mixin, FieldSpecMixin)
@@ -250,6 +257,31 @@ describe TestCase, "Field":
         self.assertIs(field.wrapper, wrapper)
         self.assertIs(field.default, default)
 
+    it "defaults spec to any_spec if format_into is specified":
+        field = Field(format_into=sb.integer_spec)
+        self.assertIs(field.spec, sb.any_spec)
+
+    it "doesn't override existing spec if format_into is specified":
+        field = Field(sb.integer_spec, format_into=sb.integer_spec)
+        self.assertIs(field.spec, sb.integer_spec)
+
+    it "sets after_format to what format_into is specified as and sets formatted to True":
+        field = Field(sb.integer_spec)
+        self.assertIs(field.after_format, sb.NotSpecified)
+        self.assertIs(field.formatted, False)
+
+        field = Field(format_into=sb.integer_spec)
+        self.assertIs(field.after_format, sb.integer_spec)
+        self.assertIs(field.formatted, True)
+
+    it "complains if we have after_format, but formatted is False":
+        with self.fuzzyAssertRaisesError(ProgrammerError, "after_format was specified when formatted was false"):
+            field = Field(sb.any_spec, formatted=False, after_format=sb.integer_spec)
+
+    it "complains if neither spec or format_into is specified":
+        with self.fuzzyAssertRaisesError(ProgrammerError, "Declaring a Field must give a spec, otherwise provide format_into"):
+            field = Field()
+
     describe "clone":
         it "creates a new instance with the same fields":
             spec = mock.Mock(name="spec")
@@ -257,8 +289,9 @@ describe TestCase, "Field":
             formatted = mock.Mock(name="formatted")
             wrapper = mock.Mock(name="wrapper")
             default = mock.Mock(name="default")
+            after_format = mock.Mock(name="after_format")
 
-            field = Field(spec, help=help, formatted=formatted, wrapper=wrapper, default=default)
+            field = Field(spec, help=help, formatted=formatted, wrapper=wrapper, default=default, after_format=after_format)
             clone = field.clone()
 
             self.assertIsNot(field, clone)
@@ -269,6 +302,7 @@ describe TestCase, "Field":
                 self.assertIs(f.formatted, formatted)
                 self.assertIs(f.wrapper, wrapper)
                 self.assertIs(f.default, default)
+                self.assertIs(f.after_format, after_format)
 
             # Make sure we can change the clone and not effect the original
             clone.formatted = False
@@ -282,9 +316,11 @@ describe TestCase, "Field":
             wrapper = mock.Mock(name="wrapper")
             default = mock.Mock(name="default")
             default2 = mock.Mock(name="default2")
+            after_format = mock.Mock(name="after_format")
+            after_format2 = mock.Mock(name="after_format2")
 
-            field = Field(spec, help=help, formatted=formatted, wrapper=wrapper, default=default)
-            clone = field.clone(formatted=formatted2, default=default2)
+            field = Field(spec, help=help, formatted=formatted, wrapper=wrapper, default=default, after_format=after_format2)
+            clone = field.clone(formatted=formatted2, default=default2, after_format=after_format2)
 
             self.assertIsNot(field, clone)
 
@@ -293,6 +329,7 @@ describe TestCase, "Field":
             self.assertIs(clone.formatted, formatted2)
             self.assertIs(clone.wrapper, wrapper)
             self.assertIs(clone.default, default2)
+            self.assertIs(clone.after_format, after_format2)
 
     describe "make_spec":
         before_each:
@@ -364,3 +401,9 @@ describe TestCase, "Field":
                 spec = NullableField(sb.string_spec, default=dflt).make_spec(self.meta, self.formatter)
                 self.assertEqual(spec.normalise(self.meta, sb.NotSpecified), dflt)
 
+            it "doesn't get formatted if not specified or specified as None":
+                formatter = mock.NonCallableMock(name="formatter", spec=[])
+                spec = NullableField(format_into=sb.integer_spec).make_spec(self.meta, formatter)
+
+                self.assertEqual(spec.normalise(self.meta, sb.NotSpecified), None)
+                self.assertEqual(spec.normalise(self.meta, None), None)

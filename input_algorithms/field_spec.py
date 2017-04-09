@@ -31,10 +31,11 @@ and have MyAmazingKls.FieldSpec().normalise for normalising a
 dictionary into an instance of MyAmazingKls!
 """
 
-from input_algorithms.spec_base import create_spec, formatted, defaulted, NotSpecified, none_spec, or_spec
+from input_algorithms.spec_base import create_spec, formatted, defaulted, NotSpecified, none_spec, or_spec, any_spec
 from input_algorithms.errors import BadSpec
 from input_algorithms.meta import Meta
 
+from delfick_error import ProgrammerError
 import six
 
 class FieldSpec(object):
@@ -168,19 +169,36 @@ class Field(object):
     metaclass = FieldSpecMetakls
     is_input_algorithms_field = True
 
-    def __init__(self, spec
+    def __init__(self
+        , spec=NotSpecified
         , help=None
         , formatted=False
         , wrapper=NotSpecified
         , default=NotSpecified
         , nullable=False
+        , format_into=NotSpecified
+        , after_format=NotSpecified
         ):
+
+        if spec is NotSpecified and format_into is NotSpecified:
+            raise ProgrammerError("Declaring a Field must give a spec, otherwise provide format_into")
+
         self.spec = spec
         self.help = help
         self.default = default
         self.wrapper = wrapper
         self.nullable = nullable
         self.formatted = formatted
+        self.after_format = after_format
+
+        if format_into is not NotSpecified:
+            self.formatted = True
+            if self.spec is NotSpecified:
+                self.spec = any_spec
+            self.after_format = format_into
+
+        if not self.formatted and self.after_format is not NotSpecified:
+            raise ProgrammerError("after_format was specified when formatted was false")
 
     def clone(self, **overrides):
         return self.__class__(self.spec
@@ -189,6 +207,7 @@ class Field(object):
             , wrapper = overrides.get("wrapper", self.wrapper)
             , default = overrides.get("default", self.default)
             , nullable = overrides.get("nullable", self.nullable)
+            , after_format = overrides.get("after_format", self.after_format)
             )
 
     def make_spec(self, meta, formatter):
@@ -196,17 +215,32 @@ class Field(object):
         Create the spec for this Field:
 
           * If callable, then call it
+
+          * If is nullable
+            * or the spec with none_spec
+            * if we have an after format, do the same with that
+
           * if it has a default, wrap in defaulted
+
           * If it can be formatted, wrap in formatted
+
           * If it has a wrapper, wrap it with that
+
           * Return the result!
         """
         spec = self.spec
         if callable(spec):
             spec = spec()
 
+        af = self.after_format
+        if af is not NotSpecified and callable(af):
+            af = af()
+
         if self.nullable:
             spec = defaulted(or_spec(none_spec(), spec), None)
+
+            if af is not NotSpecified:
+                af = or_spec(none_spec(), af)
 
         if self.default is not NotSpecified:
             spec = defaulted(spec, self.default)
@@ -215,7 +249,7 @@ class Field(object):
             if formatter is None:
                 raise BadSpec("Need a formatter to be defined", meta=meta)
             else:
-                spec = formatted(spec, formatter=formatter)
+                spec = formatted(spec, formatter=formatter, after_format=af)
 
         if self.wrapper is not NotSpecified:
             spec = self.wrapper(spec)
@@ -225,7 +259,6 @@ class Field(object):
 class NullableField(Field):
     is_input_algorithms_field = True
 
-    def __init__(self, spec, **kwargs):
+    def __init__(self, *args, **kwargs):
         kwargs["nullable"] = True
-        super(NullableField, self).__init__(spec, **kwargs)
-
+        super(NullableField, self).__init__(*args, **kwargs)
