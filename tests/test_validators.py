@@ -51,6 +51,33 @@ describe TestCase, "has_either":
         val = {"one": 1}
         self.assertEqual(va.has_either(["one", "two"]).normalise(self.meta, val), val)
 
+describe TestCase, "has_only_one_of":
+    before_each:
+        self.meta = mock.Mock(name="meta")
+
+    it "takes in choices":
+        choices = mock.Mock(name="choices")
+        validator = va.has_only_one_of(choices)
+        self.assertIs(validator.choices, choices)
+
+    it "complains if none of the values are satisfied":
+        choices = ["one", "two"]
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Can only specify exactly one of the available choices", meta=self.meta, choices=choices):
+            va.has_only_one_of(choices).normalise(self.meta, {})
+
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Can only specify exactly one of the available choices", meta=self.meta, choices=choices):
+            va.has_only_one_of(choices).normalise(self.meta, {"one": NotSpecified})
+
+    it "Lets the val through if it has atleast one choice":
+        val = {"one": 1}
+        self.assertEqual(va.has_only_one_of(["one", "two"]).normalise(self.meta, val), val)
+
+    it "complains if more than one of the values are specified":
+        val = {"one": 1, "two": 2}
+        choices = ["one", "two"]
+        with self.fuzzyAssertRaisesError(BadSpecValue, "Can only specify exactly one of the available choices", meta=self.meta, choices=choices):
+            self.assertEqual(va.has_only_one_of(choices).normalise(self.meta, val), val)
+
 describe TestCase, "either_keys":
     before_each:
         self.meta = mock.Mock(name="meta")
