@@ -56,9 +56,14 @@ describe TestCase, "has_only_one_of":
         self.meta = mock.Mock(name="meta")
 
     it "takes in choices":
-        choices = mock.Mock(name="choices")
+        choices = ["one", "two"]
         validator = va.has_only_one_of(choices)
         self.assertIs(validator.choices, choices)
+
+    it "ensures choices is specified":
+        choices = []
+        with self.fuzzyAssertRaisesError(BadSpecDefinition, "Must specify atleast one choice", got=choices):
+            validator = va.has_only_one_of(choices)
 
     it "complains if none of the values are satisfied":
         choices = ["one", "two"]
