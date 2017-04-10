@@ -65,6 +65,28 @@ class has_either(Validator):
         return val
 
 @register
+class has_only_one_of(Validator):
+    """
+    Usage
+        .. code-block:: python
+
+            has_only_one_of([key1, ..., keyn]).normalise(meta, val)
+
+    Will complain if the ``val.get(key, NotSpecified)`` returns ``NotSpecified``
+    for all but one of the choices.
+
+    I.e. A valid dictionary must have exactly one of the specified keys!
+    """
+    def setup(self, choices):
+        self.choices = choices
+
+    def validate(self, meta, val):
+        """Complain if we don't have one of the choices"""
+        if [val.get(key, NotSpecified) is NotSpecified for key in self.choices].count(True) != 1:
+            raise BadSpecValue("Need to specify atleast one of the required keys", choices=self.choices, meta=meta)
+        return val
+
+@register
 class either_keys(Validator):
     """
     Usage
