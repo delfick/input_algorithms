@@ -78,12 +78,14 @@ class has_only_one_of(Validator):
     I.e. A valid dictionary must have exactly one of the specified keys!
     """
     def setup(self, choices):
+        if len(choices) < 1:
+            raise BadSpecDefinition("Must specify atleast one choice", got=choices)
         self.choices = choices
 
     def validate(self, meta, val):
         """Complain if we don't have one of the choices"""
         if [val.get(key, NotSpecified) is NotSpecified for key in self.choices].count(True) != 1:
-            raise BadSpecValue("Need to specify atleast one of the required keys", choices=self.choices, meta=meta)
+            raise BadSpecValue("Can only specify exactly one of the available choices", choices=self.choices, meta=meta)
         return val
 
 @register
