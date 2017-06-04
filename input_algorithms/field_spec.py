@@ -139,6 +139,18 @@ class FieldSpecMetakls(type):
     """
     def __new__(metaname, classname, baseclasses, attrs):
         fields = {}
+        for kls in baseclasses:
+            f = getattr(kls, "fields", None)
+            if type(f) is dict:
+                for k, v in f.items():
+                    if isinstance(v, six.string_types):
+                        fields[k] = (v, Field(any_spec))
+                    else:
+                        fields[k] = v
+            elif type(f) is list:
+                for k in f:
+                    fields[k] = Field(any_spec)
+
         for name, options in attrs.items():
             if getattr(options, "is_input_algorithms_field", False):
                 if options.help:

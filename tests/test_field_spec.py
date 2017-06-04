@@ -12,6 +12,99 @@ import mock
 import six
 
 describe TestCase, "FieldSpec":
+    describe "inheritance":
+        it "works":
+            class MyKls(dictobj.Spec):
+                one = dictobj.Field(sb.string_spec())
+                two = dictobj.Field(sb.integer_spec)
+                three = dictobj.NullableField(sb.integer_spec)
+
+            res = MyKls.FieldSpec().normalise(Meta.empty(), {"one": "1", "two": "2"})
+            self.assertEqual(type(res), MyKls)
+            self.assertEqual(res.one, "1")
+            self.assertEqual(res.two, 2)
+            self.assertEqual(res.three, None)
+
+            class MyChildKls(MyKls):
+                four = dictobj.Field(sb.boolean)
+                five = dictobj.Field(sb.dictionary_spec)
+
+            child = MyChildKls.FieldSpec().normalise(Meta.empty()
+                  , {"one": "1", "two": "2", "four": False, "five": {}}
+                  )
+            self.assertEqual(type(child), MyChildKls)
+            self.assertEqual(child.one, "1")
+            self.assertEqual(child.two, 2)
+            self.assertEqual(child.three, None)
+            self.assertEqual(child.four, False)
+            self.assertEqual(child.five, {})
+
+            class MyGrandChildKls(MyChildKls):
+                six = dictobj.Field(sb.boolean)
+
+            child = MyGrandChildKls.FieldSpec().normalise(Meta.empty()
+                  , {"one": "1", "two": "2", "four": False, "five": {}, "six": True}
+                  )
+            self.assertEqual(type(child), MyGrandChildKls)
+            self.assertEqual(child.one, "1")
+            self.assertEqual(child.two, 2)
+            self.assertEqual(child.three, None)
+            self.assertEqual(child.four, False)
+            self.assertEqual(child.five, {})
+            self.assertEqual(child.six, True)
+
+        it "can take fields from a normal dictobj with a list fields":
+            class MyKls(dictobj):
+                fields = ["one", "two", "three"]
+
+            res = MyKls(1, 2, 3)
+            self.assertEqual(type(res), MyKls)
+            self.assertEqual(res.one, 1)
+            self.assertEqual(res.two, 2)
+            self.assertEqual(res.three, 3)
+
+            class MyChildKls(six.with_metaclass(FieldSpecMetakls, MyKls)):
+                four = dictobj.Field(sb.boolean)
+                five = dictobj.Field(sb.dictionary_spec)
+
+            child = MyChildKls.FieldSpec().normalise(Meta.empty()
+                  , {"one": "1", "two": "2", "three": "3", "four": False, "five": {}}
+                  )
+            self.assertEqual(type(child), MyChildKls)
+            self.assertEqual(child.one, "1")
+            self.assertEqual(child.two, "2")
+            self.assertEqual(child.three, "3")
+            self.assertEqual(child.four, False)
+            self.assertEqual(child.five, {})
+
+        it "can take fields from a normal dictobj with a dict fields":
+            class MyKls(dictobj):
+                fields = {
+                      "one": "the one"
+                    , "two": "the two"
+                    , "three": "the three"
+                    }
+
+            res = MyKls(1, 2, 3)
+            self.assertEqual(type(res), MyKls)
+            self.assertEqual(res.one, 1)
+            self.assertEqual(res.two, 2)
+            self.assertEqual(res.three, 3)
+
+            class MyChildKls(six.with_metaclass(FieldSpecMetakls, MyKls)):
+                four = dictobj.Field(sb.boolean)
+                five = dictobj.Field(sb.dictionary_spec)
+
+            child = MyChildKls.FieldSpec().normalise(Meta.empty()
+                  , {"one": "1", "two": "2", "three": "3", "four": False, "five": {}}
+                  )
+            self.assertEqual(type(child), MyChildKls)
+            self.assertEqual(child.one, "1")
+            self.assertEqual(child.two, "2")
+            self.assertEqual(child.three, "3")
+            self.assertEqual(child.four, False)
+            self.assertEqual(child.five, {})
+
     describe "usage":
         it "works":
             class MyKls(dictobj.Spec):
