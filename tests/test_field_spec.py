@@ -134,7 +134,7 @@ describe TestCase, "FieldSpec":
                     , "three": "the three"
                     }
 
-            res = MyKls(1, 2, 3)
+            res = MyKls(one=1, two=2, three=3)
             self.assertEqual(type(res), MyKls)
             self.assertEqual(res.one, 1)
             self.assertEqual(res.two, 2)
