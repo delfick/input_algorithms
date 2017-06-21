@@ -53,6 +53,55 @@ describe TestCase, "FieldSpec":
             self.assertEqual(child.five, {})
             self.assertEqual(child.six, True)
 
+        it "works with mixin classes":
+            class Mixin:
+                @property
+                def thing(self):
+                    return "blah"
+
+            class MyKls(dictobj.Spec, Mixin):
+                one = dictobj.Field(sb.string_spec())
+                two = dictobj.Field(sb.integer_spec)
+                three = dictobj.NullableField(sb.integer_spec)
+
+            res = MyKls.FieldSpec().normalise(Meta.empty(), {"one": "1", "two": "2"})
+            self.assertEqual(type(res), MyKls)
+            self.assertEqual(res.thing, "blah")
+
+            class MyChildKls(MyKls, Mixin):
+                four = dictobj.Field(sb.boolean)
+                five = dictobj.Field(sb.dictionary_spec)
+
+            child = MyChildKls.FieldSpec().normalise(Meta.empty()
+                  , {"one": "1", "two": "2", "four": False, "five": {}}
+                  )
+            self.assertEqual(type(child), MyChildKls)
+            self.assertEqual(child.thing, "blah")
+
+            class MyGrandChildKls(MyChildKls):
+                six = dictobj.Field(sb.boolean)
+
+            child = MyGrandChildKls.FieldSpec().normalise(Meta.empty()
+                  , {"one": "1", "two": "2", "four": False, "five": {}, "six": True}
+                  )
+            self.assertEqual(type(child), MyGrandChildKls)
+            self.assertEqual(child.thing, "blah")
+
+            class AnotherMixin:
+                @property
+                def other(self):
+                    return "meh"
+
+            class MyGrandChildKls(MyChildKls, AnotherMixin):
+                six = dictobj.Field(sb.boolean)
+
+            child = MyGrandChildKls.FieldSpec().normalise(Meta.empty()
+                  , {"one": "1", "two": "2", "four": False, "five": {}, "six": True}
+                  )
+            self.assertEqual(type(child), MyGrandChildKls)
+            self.assertEqual(child.thing, "blah")
+            self.assertEqual(child.other, "meh")
+
         it "can take fields from a normal dictobj with a list fields":
             class MyKls(dictobj):
                 fields = ["one", "two", "three"]

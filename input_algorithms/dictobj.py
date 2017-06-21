@@ -342,4 +342,16 @@ class dictobj(dict):
         # Finally, we return our new class!
         return type(kls_name, (dictobj.Spec, ), attrs)
 
-dictobj.Spec = six.with_metaclass(FieldSpecMetakls, dictobj)
+def with_metaclass(meta, *bases):
+    """
+    A copy of six.with_metaclass but taking into account ``this_bases`` as well
+    """
+    class metaclass(meta):
+        def __new__(cls, name, this_bases, d):
+            bss = bases
+            if len(this_bases) > 1:
+                bss += this_bases[1:]
+            return meta(name, bss, d)
+    return type.__new__(metaclass, 'temporary_class', (), {})
+
+dictobj.Spec = with_metaclass(FieldSpecMetakls, dictobj)
