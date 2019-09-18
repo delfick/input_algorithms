@@ -7,6 +7,11 @@ that inputted data meets those defined specifications.
 .. image:: https://travis-ci.org/delfick/input_algorithms.png?branch=master
     :target: https://travis-ci.org/delfick/input_algorithms
 
+Deprecated
+----------
+
+This project has been deprecated in favour of https://github.com/delfick/delfick_project
+
 Why the name?
 =============
 
